@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="tws_api">
-      <UniqueIdentifier>{b3573638-cb71-416d-a8c4-95cef304fbaa}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="xll_tws.h">
@@ -25,21 +22,6 @@
   <ItemGroup>
     <ClCompile Include="xll_tws.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="tws_api\EClientSocket.cpp">
-      <Filter>tws_api</Filter>
-    </ClCompile>
-    <ClCompile Include="tws_api\EClient.cpp">
-      <Filter>tws_api</Filter>
-    </ClCompile>
-    <ClCompile Include="tws_api\Decimal.cpp">
-      <Filter>tws_api</Filter>
-    </ClCompile>
-    <ClCompile Include="tws_api\Utils.cpp">
-      <Filter>tws_api</Filter>
-    </ClCompile>
-    <ClCompile Include="tws_api\OrderCondition.cpp">
-      <Filter>tws_api</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

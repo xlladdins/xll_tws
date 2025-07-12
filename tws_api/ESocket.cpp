@@ -15,7 +15,7 @@
 ESocket::ESocket() {
 }
 
-void ESocket::fd(int fd) {
+void ESocket::fd(SOCKET fd) {
     m_fd = fd;
 }
 
@@ -59,7 +59,7 @@ int ESocket::sendBufferedData()
 	return nResult;
 }
 
-int ESocket::send(const char* buf, size_t sz)
+int ESocket::send(const char* buf, int sz)
 {
 	if( sz <= 0)
 		return 0;

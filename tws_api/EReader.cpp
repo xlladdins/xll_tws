@@ -137,7 +137,7 @@ bool EReader::processNonBlockingSelect() {
       FD_SET(m_pClientSocket->fd(), &writeSet);
     FD_SET(m_pClientSocket->fd(), &errorSet);
 
-    int ret = select(m_pClientSocket->fd() + 1, &readSet, &writeSet, &errorSet, &tval);
+    int ret = select(0, &readSet, &writeSet, &errorSet, &tval);
 
     if (ret == 0) { // timeout
       return false;
@@ -183,11 +183,11 @@ void EReader::onSend() {
 }
 
 void EReader::onReceive() {
-  int nOffset = m_buf.size();
+  int nOffset = static_cast<int>(m_buf.size());
 
   m_buf.resize(m_nMaxBufSize);
 
-  int nRes = m_pClientSocket->receive(m_buf.data() + nOffset, m_buf.size() - nOffset);
+  int nRes = m_pClientSocket->receive(m_buf.data() + nOffset, static_cast<int>(m_buf.size()) - nOffset);
 
   if (nRes <= 0)
     return;
@@ -229,7 +229,7 @@ EMessage* EReader::readSingleMsg() {
 
     std::vector<char> buf = std::vector<char>(msgSize);
 
-    if (!bufferedRead(buf.data(), buf.size()))
+    if (!bufferedRead(buf.data(), static_cast<int>(buf.size())))
       return 0;
 
     return new EMessage(buf);
