@@ -146,6 +146,9 @@
     <ClCompile Include="xll_tws.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\tws_api\tws_api\tws_api.vcxproj">
+      <Project>{e4de4519-8897-4e24-aba3-d8f55ef52e33}</Project>
+    </ProjectReference>
     <ProjectReference Include="libbid\libbid.vcxproj">
       <Project>{445e4598-55cc-479e-aa3c-552ef136b0f1}</Project>
     </ProjectReference>
