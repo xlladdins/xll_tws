@@ -1,0 +1,17 @@
+// xll_tws.h - Trader Work Station API for Excel
+#pragma once
+#include "tws_api/EWrapper.h"
+#include "tws_api/EClientSocket.h"
+#include "xll24/include/xll.h"
+
+#ifndef CATEGORY
+#define CATEGORY "TWS"
+#endif
+
+namespace tws {
+
+	class Wrapper : public EWrapper {
+	};
+
+
+} // namespace tws
