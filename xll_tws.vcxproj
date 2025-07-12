@@ -143,8 +143,11 @@
     <ClInclude Include="xll_tws.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="tws_api\Decimal.cpp" />
     <ClCompile Include="tws_api\EClient.cpp" />
     <ClCompile Include="tws_api\EClientSocket.cpp" />
+    <ClCompile Include="tws_api\OrderCondition.cpp" />
+    <ClCompile Include="tws_api\Utils.cpp" />
     <ClCompile Include="xll_tws.cpp" />
   </ItemGroup>
   <ItemGroup>

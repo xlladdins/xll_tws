@@ -32,5 +32,14 @@
     <ClCompile Include="tws_api\EClient.cpp">
       <Filter>tws_api</Filter>
     </ClCompile>
+    <ClCompile Include="tws_api\Decimal.cpp">
+      <Filter>tws_api</Filter>
+    </ClCompile>
+    <ClCompile Include="tws_api\Utils.cpp">
+      <Filter>tws_api</Filter>
+    </ClCompile>
+    <ClCompile Include="tws_api\OrderCondition.cpp">
+      <Filter>tws_api</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
