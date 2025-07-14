@@ -59,7 +59,7 @@ int ESocket::sendBufferedData()
 	return nResult;
 }
 
-int ESocket::send(const char* buf, int sz)
+int ESocket::send(const char* buf, size_t sz)
 {
 	if( sz <= 0)
 		return 0;

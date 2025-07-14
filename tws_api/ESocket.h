@@ -15,7 +15,7 @@ class ESocket :
 	std::vector<char> m_outBuffer;
 
     int bufferedSend(const char* buf, size_t sz);
-    int send(const char* buf, int sz);
+    int send(const char* buf, size_t sz);
     void CleanupBuffer(std::vector<char>& buffer, int processed);
 
 public:

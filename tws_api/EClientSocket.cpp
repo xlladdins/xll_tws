@@ -195,13 +195,13 @@ void EClientSocket::encodeMsgLen(std::string& msg, unsigned offset) const
 
   assert(sizeof(unsigned) == HEADER_LEN);
   assert(msg.size() > offset + HEADER_LEN);
-  u_long len = static_cast<u_long>(msg.size() - HEADER_LEN - offset);
+  unsigned len = msg.size() - HEADER_LEN - offset;
   if (len > MAX_MSG_LEN) {
     m_pEWrapper->error(NO_VALID_ID, Utils::currentTimeMillis(), BAD_LENGTH.code(), BAD_LENGTH.msg(), "");
     return;
   }
 
-  auto netlen = htonl(len);
+  unsigned netlen = htonl(len);
   memcpy(&msg[offset], &netlen, HEADER_LEN);
 }
 
@@ -261,7 +261,7 @@ SOCKET EClientSocket::fd() const
   return m_fd;
 }
 
-int EClientSocket::receive(char* buf, int sz)
+int EClientSocket::receive(char* buf, size_t sz)
 {
   if (sz <= 0)
     return 0;
