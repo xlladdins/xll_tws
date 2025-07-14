@@ -12,8 +12,9 @@ AddIn xai_HistoricalData(
 HANDLEX WINAPI xll_HistoricalData()
 {
 #pragma XLLEXPORT
-	//HistoricalDataWrapper w;
-	//EClientSocket client(&w);
+	HistoricalDataWrapper w;
+	EClientSocket client(&w);
+	auto i = client.eConnect("", 7497, 0, false);
 
 	return 0;
 }
