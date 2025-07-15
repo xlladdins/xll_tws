@@ -3,6 +3,7 @@
 #pragma warning(disable: 4267)
 #include "tws_api/EWrapper.h"
 #include "tws_api/EClientSocket.h"
+#include "tws_api/EReaderOSSignal.h"
 #include "xll24/include/xll.h"
 
 #ifndef CATEGORY
@@ -11,27 +12,37 @@
 
 namespace tws {
 
-	struct ClientSocket : public EClientSocket {
-		ClientSocket(EWrapper* wrapper, EReaderSignal* signal = nullptr)
-			: EClientSocket(wrapper, signal) 
-		{}
-		~ClientSocket() 
+	class ClientSocket : public EClientSocket {
+		std::unique_ptr<EReaderOSSignal> signal;
+	public:
+		ClientSocket(EWrapper* wrapper, int timeout = 1000)
+			: signal(std::make_unique<EReaderOSSignal>(timeout)),
+			EClientSocket(wrapper, signal.get())
+		{ }
+		~ClientSocket()
 		{
 			if (EClientSocket::isConnected()) {
 				EClientSocket::eDisconnect();
 			}
 		}
-		ClientSocket& connect(const char* host, int port, int clientId = 0, bool extraAuth = false)
-		{
-			if (!EClientSocket::eConnect(host, port, clientId, extraAuth)) {
-				throw std::runtime_error("Failed to connect to TWS");
-			}
-			return *this;
-		}
 		operator EClientSocket&()	
 		{
 			return *this;
 		}
+	};
+
+	// Wrapper class to manage the connection and provide a default EWrapper implementation
+	class Wrapper : public EWrapper {
+	protected:
+		ClientSocket client;
+	public:
+		Wrapper(const char* host = "", int port = 7496, int clientId = 0, int timeout = 1000)
+			: EWrapper(), client(this, timeout)
+		{
+			client.eConnect(host, port, clientId);
+		}
+		~Wrapper() 
+		{ }
 	};
 
 	class HistoricalDataWrapper : public EWrapper {
@@ -57,7 +68,7 @@ namespace tws {
 		}
 		void error(int id, time_t errorTime, int errorCode, const std::string& errorString, const std::string& advancedOrderRejectJson) override
 		{
-			//std::cerr << "Error: " << id << " " << code << " " << msg << std::endl;
+			XLL_ERROR(errorString.c_str());
 		}
 		
 		HistoricalDataWrapper& connect(const char* host = "127.0.0.1", int port = 7496, int clientId = 0)
