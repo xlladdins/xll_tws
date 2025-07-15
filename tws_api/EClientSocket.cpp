@@ -27,7 +27,7 @@ const int MIN_SERVER_VER_SUPPORTED = 38; //all supported server versions are def
 // member funcs
 EClientSocket::EClientSocket(EWrapper* ptr, EReaderSignal* pSignal) : EClient(ptr, new ESocket())
 {
-  m_fd = SocketsInit() ? -1 : -2;
+  m_fd = SocketsInit() ? INVALID_SOCKET : -2;
   m_allowRedirect = false;
   m_asyncEConnect = false;
   m_pSignal = pSignal;
@@ -75,7 +75,7 @@ bool EClientSocket::eConnect(const char* host, int port, int clientId, bool extr
   errno = 0;
 
   // already connected?
-  if (m_fd >= 0) {
+  if (m_fd != INVALID_SOCKET) {
     errno = EISCONN;
     getWrapper()->error(NO_VALID_ID, Utils::currentTimeMillis(), ALREADY_CONNECTED.code(), ALREADY_CONNECTED.msg(), "");
     return false;
@@ -117,7 +117,7 @@ bool EClientSocket::eConnectImpl(int clientId, bool extraAuth, ConnState* stateO
   m_fd = socket(AF_INET, SOCK_STREAM, 0);
 
   // cannot create socket
-  if (m_fd < 0) {
+  if (m_fd == INVALID_SOCKET) {
     getWrapper()->error(NO_VALID_ID, Utils::currentTimeMillis(), FAIL_CREATE_SOCK.code(), FAIL_CREATE_SOCK.msg(), "");
     return false;
   }
@@ -133,7 +133,7 @@ bool EClientSocket::eConnectImpl(int clientId, bool extraAuth, ConnState* stateO
   if ((connect(m_fd, (struct sockaddr*)&sa, sizeof(sa))) < 0) {
     // error connecting
     SocketClose(m_fd);
-    m_fd = -1;
+    m_fd = INVALID_SOCKET;
     getWrapper()->error(NO_VALID_ID, Utils::currentTimeMillis(), CONNECT_FAIL.code(), CONNECT_FAIL.msg(), "");
     return false;
   }

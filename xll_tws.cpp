@@ -14,7 +14,7 @@ HANDLEX WINAPI xll_HistoricalData()
 #pragma XLLEXPORT
 	HistoricalDataWrapper w;
 	EClientSocket client(&w);
-	auto i = client.eConnect("", 7497, 0, false);
+	auto i = client.eConnect("127.0.0.1", 7497, 0, false);
 
 	return 0;
 }
