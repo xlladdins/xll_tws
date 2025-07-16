@@ -15,7 +15,7 @@ namespace tws {
 	class ClientSocket : public EClientSocket {
 		std::unique_ptr<EReaderOSSignal> signal;
 	public:
-		ClientSocket(EWrapper* wrapper, int timeout = 1000)
+		ClientSocket(EWrapper* wrapper, int timeout = 1000/*ms*/)
 			: signal(std::make_unique<EReaderOSSignal>(timeout)),
 			EClientSocket(wrapper, signal.get())
 		{ }
@@ -36,7 +36,7 @@ namespace tws {
 	protected:
 		ClientSocket client;
 	public:
-		Wrapper(const char* host = "", int port = 7496, int clientId = 0, int timeout = 1000)
+		Wrapper(const char* host = "", int port = 7496, int clientId = 0, int timeout = 1000/*ms*/)
 			: EWrapper(), client(this, timeout)
 		{
 			client.eConnect(host, port, clientId);

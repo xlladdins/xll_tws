@@ -18,9 +18,15 @@
     <ClInclude Include="xll_tws.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="tws_tick_type.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="xll_tws.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="xll_tick_type.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

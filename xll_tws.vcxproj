@@ -140,9 +140,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="tws_tick_type.h" />
     <ClInclude Include="xll_tws.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="xll_tick_type.cpp" />
     <ClCompile Include="xll_tws.cpp" />
   </ItemGroup>
   <ItemGroup>
