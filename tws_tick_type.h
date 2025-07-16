@@ -1,6 +1,7 @@
 ﻿// tws_tick_type.h - TWS Tick Type Definitions
 #pragma once
 
+// https://interactivebrokers.github.io/tws-api/tick_types.html
 // name, value, help, url
 #define TWS_TICK_TYPE(X) \
 X(BID_SIZE, 0, "Number of contracts or lots offered at the bid price.", "https://interactivebrokers.github.io/tws-api/interfaceIBApi_1_1EWrapper.html#a5ac52bbd35c189e4ed684185da869e02") \

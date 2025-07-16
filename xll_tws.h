@@ -12,44 +12,33 @@
 
 namespace tws {
 
-	class ClientSocket : public EClientSocket {
-		std::unique_ptr<EReaderOSSignal> signal;
-	public:
-		ClientSocket(EWrapper* wrapper, int timeout = 1000/*ms*/)
-			: signal(std::make_unique<EReaderOSSignal>(timeout)),
-			EClientSocket(wrapper, signal.get())
-		{ }
-		~ClientSocket()
-		{
-			if (EClientSocket::isConnected()) {
-				EClientSocket::eDisconnect();
-			}
-		}
-		operator EClientSocket&()	
-		{
-			return *this;
-		}
-	};
-
 	// Wrapper class to manage the connection and provide a default EWrapper implementation
 	class Wrapper : public EWrapper {
-	protected:
-		ClientSocket client;
+		EReaderOSSignal signal;
 	public:
-		Wrapper(const char* host = "", int port = 7496, int clientId = 0, int timeout = 1000/*ms*/)
-			: EWrapper(), client(this, timeout)
+		EClientSocket client;
+		Wrapper(const char* host = "", int port = 7497, int clientId = 0, int timeout = 1000/*ms*/)
+			: EWrapper(), signal(timeout), client(this, &signal)
 		{
-			client.eConnect(host, port, clientId);
+			ensure(client.eConnect(host, port, clientId));
 		}
 		~Wrapper() 
-		{ }
+		{ 
+			if (client.isConnected()) {
+				client.eDisconnect();
+			}
+		}
+
+		void error(int id, time_t errorTime, int errorCode, const std::string& errorString, const std::string& advancedOrderRejectJson) override
+		{
+			XLL_ERROR(errorString.c_str());
+		}
 	};
 
-	class HistoricalDataWrapper : public EWrapper {
-		ClientSocket client;
+	class HistoricalDataWrapper : public Wrapper {
 	public:
 		HistoricalDataWrapper() 
-			: EWrapper(), client(this)
+			: Wrapper()
 		{ }
 		~HistoricalDataWrapper() {}
 
@@ -66,10 +55,6 @@ namespace tws {
 		{
 			//std::cout << "Connected. Next valid order id: " << orderId << std::endl;
 		}
-		void error(int id, time_t errorTime, int errorCode, const std::string& errorString, const std::string& advancedOrderRejectJson) override
-		{
-			XLL_ERROR(errorString.c_str());
-		}
 		
 		HistoricalDataWrapper& connect(const char* host = "127.0.0.1", int port = 7496, int clientId = 0)
 		{
@@ -79,5 +64,48 @@ namespace tws {
 		}
 	};
 
+	struct Stock : public Contract
+	{
+		Stock(std::string_view symbol)
+			: Contract()
+		{
+			this->symbol = symbol;
+			this->secType = "STK";
+			this->currency = "USD"; // Default currency
+		}
+	};
+
+	struct Option : public Contract
+	{
+		Option(std::string_view symbol)
+			: Contract()
+		{
+			this->symbol = symbol;
+			this->secType = "OPT";
+			this->currency = "USD"; // Default currency
+		}
+	};
+
+	struct Futures : public Contract
+	{
+		Futures(std::string_view symbol)
+			: Contract()
+		{
+			this->symbol = symbol;
+			this->secType = "FUT";
+			this->currency = "USD"; // Default currency
+		}
+	};
+
+	struct Index : public Contract
+	{
+		Index(std::string_view symbol)
+			: Contract()
+		{
+			this->symbol = symbol;
+			this->secType = "IND";
+			this->currency = "USD"; // Default currency
+		}
+	};
 
 } // namespace tws

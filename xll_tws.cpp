@@ -6,16 +6,23 @@ using namespace xll;
 AddIn xai_HistoricalData(
 	Function(XLL_HANDLEX, L"xll_HistoricalData", CATEGORY L".HistoricalData")
 	.Arguments({ })
+	.Uncalced()
 	.Category(CATEGORY)
 	.FunctionHelp(L"Create a HistoricalDataWrapper instance.")
 );
 HANDLEX WINAPI xll_HistoricalData()
 {
 #pragma XLLEXPORT
-	HistoricalDataWrapper w;
-	EReaderOSSignal signal(1000);
-	EClientSocket client(&w, &signal);
-	auto i = client.eConnect("127.0.0.1", 7497, 0, false);
+	HANDLEX h = INVALID_HANDLEX;
 
-	return 0;
+	try {
+		handle<Wrapper> h_(new HistoricalDataWrapper);
+		h = h_.get();
+	}
+	catch (const std::exception& ex) {
+		XLL_ERROR(ex.what());
+		return 0;
+	}
+
+	return h;
 }

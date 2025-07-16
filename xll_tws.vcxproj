@@ -144,7 +144,10 @@
     <ClInclude Include="xll_tws.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="xll_tick_type.cpp" />
+    <ClCompile Include="xll_tick_type.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="xll_tws.cpp" />
   </ItemGroup>
   <ItemGroup>
