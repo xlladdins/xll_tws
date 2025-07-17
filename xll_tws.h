@@ -22,7 +22,7 @@ namespace tws {
 		{
 			ensure(client.eConnect(host, port, clientId));
 		}
-		~Wrapper() 
+		virtual ~Wrapper() 
 		{ 
 			if (client.isConnected()) {
 				client.eDisconnect();
@@ -63,6 +63,41 @@ namespace tws {
 			return *this;
 		}
 	};
+	class MktDataWrapper : public Wrapper {
+	public:
+		MktDataWrapper()
+			: Wrapper()
+		{
+		}
+		~MktDataWrapper() {}
+
+		void tickPrice(TickerId tickerId, TickType field, double price, const TickAttrib& attrib) override
+		{
+			char buffer[256];
+			sprintf_s(buffer, sizeof(buffer), "Tick Price: tickerId=%ld, field=%d, price=%.2f", tickerId, field, price);
+			XLL_INFORMATION(buffer);
+		}
+		/*
+		void tickSize(TickerId tickerId, TickType field, Decimal size) override
+		{
+			// Handle size tick
+			std::cout << "Tick Size: tickerId=" << tickerId << ", field=" << field << ", size=" << size << std::endl;
+		}
+
+		void tickString(TickerId tickerId, TickType tickType, const std::string& value) override
+		{
+			// Handle string tick
+			std::cout << "Tick String: tickerId=" << tickerId << ", field=" << field << ", value=" << value << std::endl;
+		}
+
+		void tickGeneric(TickerId tickerId, TickType tickType, double value)  override
+		{
+			// Handle generic tick
+			std::cout << "Tick Generic: tickerId=" << tickerId << ", field=" << field << ", value=" << value << std::endl;
+		}
+		*/
+	};
+
 
 	struct Stock : public Contract
 	{

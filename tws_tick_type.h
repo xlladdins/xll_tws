@@ -1,5 +1,6 @@
 ﻿// tws_tick_type.h - TWS Tick Type Definitions
 #pragma once
+#include <map>
 
 // https://interactivebrokers.github.io/tws-api/tick_types.html
 // name, value, help, url
@@ -27,7 +28,7 @@ X(HIGH_52_WEEK, 20, "Highest price for the last 52 weeks. For stocks only.", "ht
 X(AVG_VOLUME, 21, "The average daily trading volume over 90 days. Multiplier of 100. For stocks only.", "https://interactivebrokers.github.io/tws-api/interfaceIBApi_1_1EWrapper.html#a5ac52bbd35c189e4ed684185da869e02") \
 X(OPEN_INTEREST, 22, "(Deprecated, not currently in use) Total number of options that are not closed.", "https://interactivebrokers.github.io/tws-api/interfaceIBApi_1_1EWrapper.html#a5ac52bbd35c189e4ed684185da869e02") \
 X(OPTION_HISTORICAL_VOL, 23, "The 30-day historical volatility (currently for stocks).", "https://interactivebrokers.github.io/tws-api/interfaceIBApi_1_1EWrapper.html#a9901f14408b7a6f75b1d06e3e6196a26") \
-X(OPTION_IMPLIED_VOL, 24, "A prediction of how volatile an underlying will be in the future. The IB 30-day volatility is the at-market volatility estimated for a maturity thirty calendar days forward of the current trading day, and is based on option prices from two consecutive expiration months.", "https://interactivebrokers.github.io/tws-api/interfaceIBApi_1_1EWrapper.html#a9901f14408b7a6f75b1d06e3e6196a26") \
+X(OPTION_IMPLIED_VOL, 24, "A prediction of how volatile an underlying will be in the future.", "https://interactivebrokers.github.io/tws-api/interfaceIBApi_1_1EWrapper.html#a9901f14408b7a6f75b1d06e3e6196a26") \
 X(OPTION_BID_EXCH, 25, "Not Used.", "https://interactivebrokers.github.io/tws-api/interfaceIBApi_1_1EWrapper.html#a19cb7c5bbd4ab05ccc5f9e686ed07a9e") \
 X(OPTION_ASK_EXCH, 26, "Not Used.", "https://interactivebrokers.github.io/tws-api/interfaceIBApi_1_1EWrapper.html#a19cb7c5bbd4ab05ccc5f9e686ed07a9e") \
 X(OPTION_CALL_OPEN_INTEREST, 27, "Call option open interest.", "https://interactivebrokers.github.io/tws-api/interfaceIBApi_1_1EWrapper.html#a5ac52bbd35c189e4ed684185da869e02") \
@@ -103,3 +104,11 @@ X(ETF_NAV_LOW, 99, "The low price of ETF's Net Asset Value (NAV)", "https://inte
 X(ESTIMATED_IPO_MIDPOINT, 101, "Midpoint is calculated based on IPO price range", "https://interactivebrokers.github.io/tws-api/interfaceIBApi_1_1EWrapper.html#a9901f14408b7a6f75b1d06e3e6196a26") \
 X(FINAL_IPO_LAST, 102, "Final price for IPO", "https://interactivebrokers.github.io/tws-api/interfaceIBApi_1_1EWrapper.html#a9901f14408b7a6f75b1d06e3e6196a26") \
 
+namespace tws {
+
+#define TWS_TICK_TYPE_MAP(name, value, help, url) { #name, value },
+	inline std::map<std::string, int> TickType = {
+			TWS_TICK_TYPE(TWS_TICK_TYPE_MAP)
+	};
+
+} // namespace tws
