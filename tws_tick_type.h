@@ -1,4 +1,7 @@
 ﻿// tws_tick_type.h - TWS Tick Type Definitions
+/*
+Use EDecoder::DecodeField???
+*/
 #pragma once
 #include <map>
 

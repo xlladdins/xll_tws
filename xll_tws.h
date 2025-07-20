@@ -4,26 +4,87 @@
 #include "tws_api/EWrapper.h"
 #include "tws_api/EClientSocket.h"
 #include "tws_api/EReaderOSSignal.h"
+#include "tws_api/EReader.h"
 #include "xll24/include/xll.h"
 
 #ifndef CATEGORY
 #define CATEGORY L"TWS"
 #endif
+#include <variant>
+
+// TwsSocketClientErrors.h
+#define TWS_CODE_MSG_PAIR(X) \
+	X(NO_VALID_ID, "No valid Id"), \
+	X(NO_VALID_ERROR_CODE, "No valid error code"), \
+	X(SYSTEM_ERROR, "System error"), \
+	X(100, "Error: No error."), \
+	X(101, "Error: Unknown error."), \
+	X(102, "Error: Invalid argument."), \
+	X(103, "Error: Not implemented."), \
+	X(104, "Error: Not connected."), \
+	X(105, "Error: Already connected."), \
+	X(106, "Error: Connection failed."), \
+	X(107, "Error: Connection timeout."), \
+	X(108, "Error: Connection closed by server."), \
+	X(109, "Error: Connection reset by peer."), \
+	X(110, "Error: Connection refused."), \
+	X(111, "Error: Connection aborted."), \
+	X(112, "Error: Connection lost."), \
+	X(113, "Error: Connection error."), \
+	X(501, "Error: Already connected."), \
+	X(502, "Error: Couldn't connect to TWS. Confirm that \"Enable ActiveX and Socket Clients\" "), \
+	X(503, "Error: The TWS is out of date and must be upgraded."), \
+	X(504, "Error: Not connected"), \
+	X(505, "Error: Fatal Error: Unknown message id."), \
+	X(506, "Error: Unsupported version"), \
+	X(507, "Error: Bad message length"), \
+	X(508, "Error: Bad message"), \
+	X(509, "Error: Exception caught while reading socket - "), \
+	X(520, "Error: Failed to create socket"), \
+	X(530, "Error: SSL specific error: "), \
+	X(579, "Error: Invalid symbol in string - "), \
+	X(585, "Error: FA Profile is not supported anymore, use FA Group instead - "), \
 
 namespace tws {
 
+
+	enum class ErrorType {
+		Error,
+		Warning,
+		Info,
+		Unknown
+	};
+
+	ErrorType Error(int errorCode) {
+		// Error codes (partial list, expand as needed)
+		if (100 <= errorCode && errorCode <= 999)
+			return ErrorType::Error;
+		// Warnings
+		if (errorCode == 2104 || errorCode == 2106 || errorCode == 2107 || errorCode == 2108)
+			return ErrorType::Warning;
+		// Informational
+		if (errorCode == 2103 || errorCode == 2105 || errorCode == 2158)
+			return ErrorType::Info;
+		// Add more codes as needed
+
+		return ErrorType::Unknown;
+	}
+
 	// Wrapper class to manage the connection and provide a default EWrapper implementation
 	class Wrapper : public EWrapper {
-		EReaderOSSignal signal;
 	public:
+		using Value = std::variant<double, Decimal, std::string>;
+		static std::map<TickerId, std::map<TickType, Value>> tickData;
+		OrderId orderId;
+		EReaderOSSignal signal;
 		EClientSocket client;
-		Wrapper(const char* host = "", int port = 7497, int clientId = 0, int timeout = 1000/*ms*/)
-			: EWrapper(), signal(timeout), client(this, &signal)
+		Wrapper(const char* host = "127.0.0.1", int port = 7497, int clientId = 0, int timeout = 1000/*ms*/)
+			: EWrapper(), orderId(0), signal(timeout), client(this, &signal)
 		{
 			ensure(client.eConnect(host, port, clientId));
 		}
-		virtual ~Wrapper() 
-		{ 
+		virtual ~Wrapper()
+		{
 			if (client.isConnected()) {
 				client.eDisconnect();
 			}
@@ -31,15 +92,36 @@ namespace tws {
 
 		void error(int id, time_t errorTime, int errorCode, const std::string& errorString, const std::string& advancedOrderRejectJson) override
 		{
-			XLL_ERROR(errorString.c_str());
+			char buffer[256];
+			sprintf_s(buffer, sizeof(buffer), "Error %d: %s (ID: %d, Time: %lld)", errorCode, errorString.c_str(), id, static_cast<long long>(errorTime));
+
+			switch (Error(errorCode)) {
+			case ErrorType::Error:
+				XLL_ERROR(buffer);
+				break;
+			case ErrorType::Warning:
+				XLL_WARNING(buffer);
+				break;
+			case ErrorType::Info:
+				XLL_INFORMATION(buffer);
+				break;
+			default:
+				XLL_ERROR("Unknown error");
+			}
+		}
+
+		void nextValidId(OrderId orderId)
+		{
+			this->orderId = orderId;
 		}
 	};
 
 	class HistoricalDataWrapper : public Wrapper {
 	public:
-		HistoricalDataWrapper() 
+		HistoricalDataWrapper()
 			: Wrapper()
-		{ }
+		{
+		}
 		~HistoricalDataWrapper() {}
 
 		// Override EWrapper methods as needed
@@ -55,16 +137,11 @@ namespace tws {
 		{
 			//std::cout << "Connected. Next valid order id: " << orderId << std::endl;
 		}
-		
-		HistoricalDataWrapper& connect(const char* host = "127.0.0.1", int port = 7496, int clientId = 0)
-		{
-			client.eConnect(host, port, clientId);
-
-			return *this;
-		}
 	};
+
 	class MktDataWrapper : public Wrapper {
 	public:
+
 		MktDataWrapper()
 			: Wrapper()
 		{
@@ -73,29 +150,20 @@ namespace tws {
 
 		void tickPrice(TickerId tickerId, TickType field, double price, const TickAttrib& attrib) override
 		{
-			char buffer[256];
-			sprintf_s(buffer, sizeof(buffer), "Tick Price: tickerId=%ld, field=%d, price=%.2f", tickerId, field, price);
-			XLL_INFORMATION(buffer);
+			tickData[tickerId][field] = price;
 		}
-		/*
 		void tickSize(TickerId tickerId, TickType field, Decimal size) override
 		{
-			// Handle size tick
-			std::cout << "Tick Size: tickerId=" << tickerId << ", field=" << field << ", size=" << size << std::endl;
+			tickData[tickerId][field] = size;
 		}
-
 		void tickString(TickerId tickerId, TickType tickType, const std::string& value) override
 		{
-			// Handle string tick
-			std::cout << "Tick String: tickerId=" << tickerId << ", field=" << field << ", value=" << value << std::endl;
+			tickData[tickerId][tickType] = value;
 		}
-
-		void tickGeneric(TickerId tickerId, TickType tickType, double value)  override
+		void tickGeneric(TickerId tickerId, TickType tickType, double value) override
 		{
-			// Handle generic tick
-			std::cout << "Tick Generic: tickerId=" << tickerId << ", field=" << field << ", value=" << value << std::endl;
+			tickData[tickerId][tickType] = value;
 		}
-		*/
 	};
 
 
@@ -107,6 +175,7 @@ namespace tws {
 			this->symbol = symbol;
 			this->secType = "STK";
 			this->currency = "USD"; // Default currency
+			this->exchange = "SMART"; // Default exchange
 		}
 	};
 
