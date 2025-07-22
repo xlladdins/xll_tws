@@ -109,9 +109,18 @@ X(FINAL_IPO_LAST, 102, "Final price for IPO", "https://interactivebrokers.github
 
 namespace tws {
 
+	// String name to value map for TWS tick types.
 #define TWS_TICK_TYPE_MAP(name, value, help, url) { #name, value },
-	inline std::map<std::string, int> TickType = {
+	inline std::map<std::string, int> tickType = {
 			TWS_TICK_TYPE(TWS_TICK_TYPE_MAP)
 	};
+#undef TWS_TICK_TYPE_MAP
+
+	// Value to string name map for TWS tick types.
+#define TWS_TICK_NAME_MAP(name, value, help, url) { value, #name },
+	inline std::map<int, std::string> tickName = {
+			TWS_TICK_TYPE(TWS_TICK_NAME_MAP)
+	};
+#undef TWS_TICK_NAME_MAP
 
 } // namespace tws

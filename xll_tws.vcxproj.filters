@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="xll_tws.h">
+    <ClInclude Include="tws_tws.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="tws_tick_type.h">

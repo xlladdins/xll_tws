@@ -1,10 +1,20 @@
 #include <thread>
-#include "xll_tws.h"
+#include "tws_tws.h"
+#include "tws_tick_type.h"
+//#define __STDC_WANT_DEC_FP__ 
+//#include "libbid/LIBRARY/src/dfp754.h"
 
 using namespace tws;
 using namespace xll;
 
-std::map<TickerId, std::map<TickType, Wrapper::Value>> Wrapper::tickData;
+template<class... Ts>
+struct overloads : Ts... { using Ts::operator()...; };
+const auto visitor = overloads
+{
+	[](double d) { return OPER(d); },
+	[](Decimal d) { return OPER(static_cast<double>(d)); }, // TODO: use libbid???
+	[](const std::string& s) { return OPER(s.c_str()); }
+};
 
 AddIn xai_HistoricalData(
 	Function(XLL_HANDLEX, L"xll_HistoricalData", L"\\" CATEGORY L".HistoricalData")
@@ -59,11 +69,22 @@ void WINAPI reqMktData(OPER&& asyncHandle, MktDataWrapper* wrapper)
 		EReader reader(&wrapper->client, &wrapper->signal);
 		reader.start();
 		// break if error???
-		while (wrapper->tickData.size() == 0) {
+		//while (wrapper->tickData.size() == 0) {
 			wrapper->signal.waitForSignal();
 			reader.processMsgs();
+		//}
+		std::this_thread::sleep_for(std::chrono::seconds(1));;
+		for (const auto& [id, kv] : wrapper->tickData) {
+			OPER o(2, kv.size());
+			int i = 0;
+			for (const auto& [tick, value] : kv) {
+				// Use std::visit to handle different types of values
+				o(0, i) = tickName[tick];
+				o(1, i) = std::visit(visitor, value);
+			}
+			o.reshape(size(o) / 2, 2);
+			Excel12(xlAsyncReturn, 0, 2, &asyncHandle, &o);
 		}
-		auto a = wrapper->tickData.begin();
 	}
 	catch (const std::exception& ex) {
 		XLL_ERROR(ex.what());
@@ -95,9 +116,9 @@ void WINAPI xll_reqMktData(HANDLEX hWrapper, const char* symbol, LPOPER asyncHan
 		auto wrapper = h.as<MktDataWrapper>();
 		ensure(wrapper);
 		ensure(wrapper->client.isConnected());
-		//start_event_loop(wrapper);
 		Stock stock(symbol);
-		wrapper->client.reqMktData(wrapper->orderId, stock, "68", true, false, nullptr);
+		wrapper->client.reqMarketDataType(MarketDataType::DELAYED_FROZEN);
+		wrapper->client.reqMktData(wrapper->orderId, stock, "0,1,2,3,4,5,6,7", false, false, TagValueListSPtr());
 		std::thread(reqMktData, *asyncHandle, wrapper).detach();
 	}
 	catch (const std::exception& ex) {

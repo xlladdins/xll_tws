@@ -141,7 +141,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="tws_tick_type.h" />
-    <ClInclude Include="xll_tws.h" />
+    <ClInclude Include="tws_tws.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="xll_tick_type.cpp">

@@ -1,5 +1,6 @@
 // xll_tws.h - Trader Work Station API for Excel
 #pragma once
+#include <variant>
 #pragma warning(disable: 4267)
 #include "tws_api/EWrapper.h"
 #include "tws_api/EClientSocket.h"
@@ -10,43 +11,41 @@
 #ifndef CATEGORY
 #define CATEGORY L"TWS"
 #endif
-#include <variant>
 
 // TwsSocketClientErrors.h
 #define TWS_CODE_MSG_PAIR(X) \
 	X(NO_VALID_ID, "No valid Id"), \
 	X(NO_VALID_ERROR_CODE, "No valid error code"), \
 	X(SYSTEM_ERROR, "System error"), \
-	X(100, "Error: No error."), \
-	X(101, "Error: Unknown error."), \
-	X(102, "Error: Invalid argument."), \
-	X(103, "Error: Not implemented."), \
-	X(104, "Error: Not connected."), \
-	X(105, "Error: Already connected."), \
-	X(106, "Error: Connection failed."), \
-	X(107, "Error: Connection timeout."), \
-	X(108, "Error: Connection closed by server."), \
-	X(109, "Error: Connection reset by peer."), \
-	X(110, "Error: Connection refused."), \
-	X(111, "Error: Connection aborted."), \
-	X(112, "Error: Connection lost."), \
-	X(113, "Error: Connection error."), \
-	X(501, "Error: Already connected."), \
-	X(502, "Error: Couldn't connect to TWS. Confirm that \"Enable ActiveX and Socket Clients\" "), \
-	X(503, "Error: The TWS is out of date and must be upgraded."), \
-	X(504, "Error: Not connected"), \
-	X(505, "Error: Fatal Error: Unknown message id."), \
-	X(506, "Error: Unsupported version"), \
-	X(507, "Error: Bad message length"), \
-	X(508, "Error: Bad message"), \
-	X(509, "Error: Exception caught while reading socket - "), \
-	X(520, "Error: Failed to create socket"), \
-	X(530, "Error: SSL specific error: "), \
-	X(579, "Error: Invalid symbol in string - "), \
-	X(585, "Error: FA Profile is not supported anymore, use FA Group instead - "), \
+	X(100, "No error."), \
+	X(101, "Unknown error."), \
+	X(102, "Invalid argument."), \
+	X(103, "Not implemented."), \
+	X(104, "Not connected."), \
+	X(105, "Already connected."), \
+	X(106, "Connection failed."), \
+	X(107, "Connection timeout."), \
+	X(108, "Connection closed by server."), \
+	X(109, "Connection reset by peer."), \
+	X(110, "Connection refused."), \
+	X(111, "Connection aborted."), \
+	X(112, "Connection lost."), \
+	X(113, "Connection error."), \
+	X(501, "Already connected."), \
+	X(502, "Couldn't connect to TWS. Confirm that \"Enable ActiveX and Socket Clients\" "), \
+	X(503, "The TWS is out of date and must be upgraded."), \
+	X(504, "Not connected"), \
+	X(505, "Fatal Unknown message id."), \
+	X(506, "Unsupported version"), \
+	X(507, "Bad message length"), \
+	X(508, "Bad message"), \
+	X(509, "Exception caught while reading socket - "), \
+	X(520, "Failed to create socket"), \
+	X(530, "SSL specific error: "), \
+	X(579, "Invalid symbol in string - "), \
+	X(585, "FA Profile is not supported anymore, use FA Group instead - "), \
 
 namespace tws {
-
 
 	enum class ErrorType {
 		Error,
@@ -70,17 +69,20 @@ namespace tws {
 		return ErrorType::Unknown;
 	}
 
+	// Value type to hold different tick data types
+	using Value = std::variant<double, Decimal, std::string>;
+
 	// Wrapper class to manage the connection and provide a default EWrapper implementation
 	class Wrapper : public EWrapper {
 	public:
-		using Value = std::variant<double, Decimal, std::string>;
-		static std::map<TickerId, std::map<TickType, Value>> tickData;
+		std::map<TickerId, std::map<TickType, Value>> tickData;
 		OrderId orderId;
 		EReaderOSSignal signal;
 		EClientSocket client;
 		Wrapper(const char* host = "127.0.0.1", int port = 7497, int clientId = 0, int timeout = 1000/*ms*/)
 			: EWrapper(), orderId(0), signal(timeout), client(this, &signal)
 		{
+			client.setConnectOptions("+PACEAPI"); 
 			ensure(client.eConnect(host, port, clientId));
 		}
 		virtual ~Wrapper()
@@ -90,9 +92,11 @@ namespace tws {
 			}
 		}
 
+		// reset???
+
 		void error(int id, time_t errorTime, int errorCode, const std::string& errorString, const std::string& advancedOrderRejectJson) override
 		{
-			char buffer[256];
+			char buffer[2048];
 			sprintf_s(buffer, sizeof(buffer), "Error %d: %s (ID: %d, Time: %lld)", errorCode, errorString.c_str(), id, static_cast<long long>(errorTime));
 
 			switch (Error(errorCode)) {
@@ -106,7 +110,7 @@ namespace tws {
 				XLL_INFORMATION(buffer);
 				break;
 			default:
-				XLL_ERROR("Unknown error");
+				XLL_ERROR(buffer);
 			}
 		}
 

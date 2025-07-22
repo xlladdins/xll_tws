@@ -137,7 +137,7 @@ bool EReader::processNonBlockingSelect() {
       FD_SET(m_pClientSocket->fd(), &writeSet);
     FD_SET(m_pClientSocket->fd(), &errorSet);
 
-    int ret = select(m_pClientSocket->fd() + 1, &readSet, &writeSet, &errorSet, &tval);
+    int ret = select(0, &readSet, &writeSet, &errorSet, &tval);
 
     if (ret == 0) { // timeout
       return false;
