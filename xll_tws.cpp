@@ -39,20 +39,32 @@ HANDLEX WINAPI xll_HistoricalData()
 	return h;
 }
 
+XLL_CONST(INT, MarketDataType_REALTIME, MarketDataType::REALTIME, "Real-time market data type.", CATEGORY, "https://interactivebrokers.github.io/tws-api/market_data_type.html");
+XLL_CONST(INT, MarketDataType_FROZEN, MarketDataType::FROZEN, "Real-time market data type.", CATEGORY, "https://interactivebrokers.github.io/tws-api/market_data_type.html");
+XLL_CONST(INT, MarketDataType_DELAYED, MarketDataType::DELAYED, "Real-time market data type.", CATEGORY, "https://interactivebrokers.github.io/tws-api/market_data_type.html");
+XLL_CONST(INT, MarketDataType_DELAYED_FROZEN, MarketDataType::DELAYED_FROZEN, "Real-time market data type.", CATEGORY, "https://interactivebrokers.github.io/tws-api/market_data_type.html");
+
 AddIn xai_MktData(
 	Function(XLL_HANDLEX, L"xll_MktData", L"\\" CATEGORY L".MktData")
-	.Arguments({ })
+	.Arguments({ 
+		Arg(XLL_INT, L"type", L"market data type from the MarketDataType_* enumeration.")
+	})
 	.Uncalced()
 	.Category(CATEGORY)
 	.FunctionHelp(L"Create a market data wrapper instance.")
 );
-HANDLEX WINAPI xll_MktData()
+HANDLEX WINAPI xll_MktData(MarketDataType type)
 {
 #pragma XLLEXPORT
 	HANDLEX h = INVALID_HANDLEX;
 
 	try {
 		handle<Wrapper> h_(new MktDataWrapper);
+		if (type == 0) {
+			// Default market data type.
+			type = MarketDataType::DELAYED_FROZEN;
+		}
+		h_->client.reqMarketDataType(type);
 		h = h_.get();
 	}
 	catch (const std::exception& ex) {
@@ -117,7 +129,6 @@ void WINAPI xll_reqMktData(HANDLEX hWrapper, const char* symbol, LPOPER asyncHan
 		ensure(wrapper);
 		ensure(wrapper->client.isConnected());
 		Stock stock(symbol);
-		wrapper->client.reqMarketDataType(MarketDataType::DELAYED_FROZEN);
 		wrapper->client.reqMktData(wrapper->orderId, stock, "0,1,2,3,4,5,6,7", false, false, TagValueListSPtr());
 		std::thread(reqMktData, *asyncHandle, wrapper).detach();
 	}

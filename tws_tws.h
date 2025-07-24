@@ -82,8 +82,10 @@ namespace tws {
 		Wrapper(const char* host = "127.0.0.1", int port = 7497, int clientId = 0, int timeout = 1000/*ms*/)
 			: EWrapper(), orderId(0), signal(timeout), client(this, &signal)
 		{
-			client.setConnectOptions("+PACEAPI"); 
-			ensure(client.eConnect(host, port, clientId));
+			if (!client.isConnected()) {
+				client.setConnectOptions("+PACEAPI");
+				ensure(client.eConnect(host, port, clientId));
+			}
 		}
 		virtual ~Wrapper()
 		{
