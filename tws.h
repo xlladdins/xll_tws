@@ -1,5 +1,7 @@
 // xll_tws.h - Trader Work Station API for Excel
 #pragma once
+#include <condition_variable>
+#include <mutex>
 #include <variant>
 #pragma warning(disable: 4267)
 #include "tws_api/EWrapper.h"
@@ -47,27 +49,57 @@
 
 namespace tws {
 
+	// Convert time_t to a localtime string using format.
+	inline std::string formatTime(time_t t, const char* format) {
+		struct tm* timeinfo = localtime(&t);
+		char buffer[20];
+		strftime(buffer, sizeof(buffer), format, timeinfo);
+
+		return std::string(buffer);
+	}
+	inline const char* const YMDHMS = "%Y%m%d %H:%M:%S";
+	inline const char* const YMD = "%Y%m%d";
+	inline std::string DateTime(time_t t) { return formatTime(t, YMDHMS); }
+	inline std::string Date(time_t t) { return formatTime(t, YMD); }
+
 	enum class ErrorType {
 		Error,
 		Warning,
-		Info,
+		Information,
 		Unknown
 	};
 
-	ErrorType Error(int errorCode) {
-		// Error codes (partial list, expand as needed)
-		if (100 <= errorCode && errorCode <= 999)
-			return ErrorType::Error;
-		// Warnings
-		if (errorCode == 2104 || errorCode == 2106 || errorCode == 2107 || errorCode == 2108)
-			return ErrorType::Warning;
-		// Informational
-		if (errorCode == 2103 || errorCode == 2105 || errorCode == 2158)
-			return ErrorType::Info;
-		// Add more codes as needed
 
-		return ErrorType::Unknown;
-	}
+	struct Error : public std::exception {
+		int id;
+		time_t errorTime;
+		int errorCode;
+		std::string errorString;
+		std::string advancedOrderRejectJson;
+		Error(int id, time_t errorTime, int errorCode, const std::string& errorString, const std::string& advancedOrderRejectJson)
+			: id(id), errorTime(errorTime), errorCode(errorCode), errorString(errorString), advancedOrderRejectJson(advancedOrderRejectJson) {
+		}
+		ErrorType errorType() const
+		{
+			// Error codes (partial list, expand as needed)
+			if (100 <= errorCode && errorCode <= 999)
+				return ErrorType::Error;
+			// Warnings
+			if (errorCode == 2104 || errorCode == 2106 || errorCode == 2107 || errorCode == 2108)
+				return ErrorType::Warning;
+			// Informational
+			if (errorCode == 2103 || errorCode == 2105 || errorCode == 2158)
+				return ErrorType::Information;
+			// Add more codes as needed
+
+			return ErrorType::Unknown;
+		}
+		const char* what() const override
+		{
+			return errorString.c_str();
+		}
+	};
+
 
 	// Value type to hold different tick data types
 	using Value = std::variant<double, Decimal, std::string>;
@@ -79,6 +111,7 @@ namespace tws {
 		OrderId orderId;
 		EReaderOSSignal signal;
 		EClientSocket client;
+		// Connect to client socket if necessary.
 		Wrapper(const char* host = "127.0.0.1", int port = 7497, int clientId = 0, int timeout = 1000/*ms*/)
 			: EWrapper(), orderId(0), signal(timeout), client(this, &signal)
 		{
@@ -98,22 +131,7 @@ namespace tws {
 
 		void error(int id, time_t errorTime, int errorCode, const std::string& errorString, const std::string& advancedOrderRejectJson) override
 		{
-			char buffer[2048];
-			sprintf_s(buffer, sizeof(buffer), "Error %d: %s (ID: %d, Time: %lld)", errorCode, errorString.c_str(), id, static_cast<long long>(errorTime));
-
-			switch (Error(errorCode)) {
-			case ErrorType::Error:
-				XLL_ERROR(buffer);
-				break;
-			case ErrorType::Warning:
-				XLL_WARNING(buffer);
-				break;
-			case ErrorType::Info:
-				XLL_INFORMATION(buffer);
-				break;
-			default:
-				XLL_ERROR(buffer);
-			}
+			throw Error(id, errorTime, errorCode, errorString, advancedOrderRejectJson);
 		}
 
 		void nextValidId(OrderId orderId)
@@ -122,15 +140,45 @@ namespace tws {
 		}
 	};
 
+	struct SymbolSamplesWrapper : public Wrapper {
+		std::vector<ContractDescription> symbolResults;
+		std::mutex symbolMutex;
+		std::condition_variable symbolCv;
+		bool symbolReady = false;
+ 		public:
+		std::vector<ContractDescription> contractDescriptions;
+		SymbolSamplesWrapper() = default;
+		~SymbolSamplesWrapper() = default;
+		void symbolSamples(int reqId, const std::vector<ContractDescription>& contractDescriptions) override
+		{
+			std::lock_guard<std::mutex> lock(symbolMutex);
+			symbolResults = contractDescriptions;
+			symbolReady = true;
+			symbolCv.notify_all();
+		}
+		std::vector<ContractDescription> searchSymbols(const std::string& pattern) {
+			{
+				std::lock_guard<std::mutex> lock(symbolMutex);
+				symbolReady = false;
+			}
+			client.reqMatchingSymbols(orderId, pattern);
+			std::unique_lock<std::mutex> lock(symbolMutex);
+			symbolCv.wait(lock, [this] { return symbolReady; });
+			return symbolResults;
+		}
+	};
+
 	class HistoricalDataWrapper : public Wrapper {
 	public:
-		HistoricalDataWrapper()
-			: Wrapper()
-		{
-		}
-		~HistoricalDataWrapper() {}
+		std::string headTimeStamp;
+		HistoricalDataWrapper() = default;
+		~HistoricalDataWrapper() = default;
 
 		// Override EWrapper methods as needed
+		void headTimestamp(int reqId, const std::string& headTimestamp) 
+		{
+			this->headTimeStamp = headTimestamp;
+		}
 		void historicalData(TickerId reqId, const Bar& bar) override
 		{
 			// Handle historical data here
@@ -138,10 +186,6 @@ namespace tws {
 		void historicalDataEnd(int reqId, const std::string& startDateStr, const std::string& endDateStr) override
 		{
 			//std::cout << "Historical data end." << std::endl;
-		}
-		void nextValidId(OrderId orderId) override
-		{
-			//std::cout << "Connected. Next valid order id: " << orderId << std::endl;
 		}
 	};
 

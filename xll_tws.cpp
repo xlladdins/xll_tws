@@ -1,5 +1,5 @@
 #include <thread>
-#include "tws_tws.h"
+#include "tws.h"
 #include "tws_tick_type.h"
 //#define __STDC_WANT_DEC_FP__ 
 //#include "libbid/LIBRARY/src/dfp754.h"
@@ -7,14 +7,35 @@
 using namespace tws;
 using namespace xll;
 
+// Use std::visit(value, visitor) to handle different types of values in the tick data.
 template<class... Ts>
 struct overloads : Ts... { using Ts::operator()...; };
 const auto visitor = overloads
 {
 	[](double d) { return OPER(d); },
-	[](Decimal d) { return OPER(static_cast<double>(d)); }, // TODO: use libbid???
+	[](Decimal d) { return OPER(DecimalFunctions::decimalToDouble(d)); },
 	[](const std::string& s) { return OPER(s.c_str()); }
 };
+
+static Wrapper wrapper; // host, port, clientId, timeout);
+
+AddIn xai_Wrapper(
+	Function(XLL_HANDLEX, L"xll_Wrapper", L"\\" CATEGORY L".Wrapper")
+	.Arguments({ 
+		Arg(XLL_CSTRING4, L"host", L"Host name or IP address of the TWS or IB Gateway."),
+		Arg(XLL_INT, L"port", L"Port number of the TWS or IB Gateway."),
+		Arg(XLL_INT, L"clientId", L"Client ID for the connection."),
+		Arg(XLL_INT, L"timeout", L"Timeout in milliseconds for the connection.")
+	})
+	.Uncalced()
+	.Category(CATEGORY)
+	.FunctionHelp(L"Create a TWS API wrapper instance.")
+);
+HANDLEX WINAPI xll_Wrapper(const char* host, int port, int clientId, int timeout)
+{
+#pragma XLLEXPORT
+	return to_handle(&wrapper);
+}
 
 AddIn xai_HistoricalData(
 	Function(XLL_HANDLEX, L"xll_HistoricalData", L"\\" CATEGORY L".HistoricalData")
@@ -80,11 +101,8 @@ void WINAPI reqMktData(OPER&& asyncHandle, MktDataWrapper* wrapper)
 	try {
 		EReader reader(&wrapper->client, &wrapper->signal);
 		reader.start();
-		// break if error???
-		//while (wrapper->tickData.size() == 0) {
-			wrapper->signal.waitForSignal();
-			reader.processMsgs();
-		//}
+		wrapper->signal.waitForSignal();
+		reader.processMsgs();
 		std::this_thread::sleep_for(std::chrono::seconds(1));;
 		for (const auto& [id, kv] : wrapper->tickData) {
 			OPER o(2, kv.size());
