@@ -1,5 +1,5 @@
 // xll_tick_type.cpp - Tick Type enumeration
-#include "tws_tws.h"
+#include "tws.h"
 #include "tws_tick_type.h"
 
 using namespace xll;

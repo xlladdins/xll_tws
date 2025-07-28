@@ -10,15 +10,95 @@ using namespace xll;
 // Use std::visit(value, visitor) to handle different types of values in the tick data.
 template<class... Ts>
 struct overloads : Ts... { using Ts::operator()...; };
+// Convert TWS value to OPER type.
 const auto visitor = overloads
 {
+	[](bool b) { return OPER(b); },
+	[](int i) { return OPER(i); },
+	[](long l) { return OPER(static_cast<int>(l)); },
+	[](long long ll) { return OPER(static_cast<double>(ll)); },
+	[](const char* s) { return OPER(s); },
 	[](double d) { return OPER(d); },
 	[](Decimal d) { return OPER(DecimalFunctions::decimalToDouble(d)); },
 	[](const std::string& s) { return OPER(s.c_str()); }
 };
 
-static Wrapper wrapper; // host, port, clientId, timeout);
+//static Wrapper wrapper; // host, port, clientId, timeout);
 
+
+AddIn xai_symbol_sample_wrapper(
+	Function(XLL_HANDLEX, L"xll_symbol_sample_wrapper", L"\\" CATEGORY L".SymbolSampleWrapper")
+	.Uncalced()
+	.Category(CATEGORY)
+	.FunctionHelp(L"Return handle to symbol sample wrapper.")
+);
+HANDLEX WINAPI xll_symbol_sample_wrapper()
+{
+#pragma XLLEXPORT
+	HANDLEX h = INVALID_HANDLEX;
+
+	try {
+		handle<Wrapper> h_(new SymbolSamplesWrapper());
+		ensure(h_);
+		h = h_.get();
+	}
+	catch (const std::exception& ex) {
+		XLL_ERROR(ex.what());
+	}
+
+	return h;
+}
+
+void WINAPI reqMatchingSymbols(OPER&& asyncHandle, SymbolSamplesWrapper* pssw)
+{
+	try {
+		EReader reader(&pssw->client, &pssw->signal);
+		reader.start();
+		pssw->signal.waitForSignal();
+		reader.processMsgs();
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+		OPER o;
+		for (const auto& cr : pssw->symbolResults) {
+			o.hstack(OPER(cr.contract.symbol.c_str()));
+		}
+		Excel12(xlAsyncReturn, 0, 2, &asyncHandle, &o);
+	}
+	catch (const std::exception& ex) {
+		XLL_ERROR(ex.what());
+		Excel12(xlAsyncReturn, 0, 2, &asyncHandle, &ErrNA);
+	}
+	catch (...) {
+		XLL_ERROR("reqMktData: unknown exception");
+		Excel12(xlAsyncReturn, 0, 2, &asyncHandle, &ErrNA);
+	}
+}
+
+AddIn xai_req_matching_symbols(
+	Function(XLL_VOID, L"xll_req_matching_symbols", L"\\" CATEGORY L".reqMatchingSymbols")
+	.Arguments({ 
+		Arg(XLL_HANDLEX, L"handle", L"symbol sample handle."),	
+		Arg(XLL_CSTRING4, L"pattern", L"either start of ticker symbol or (for larger strings) company name.")
+	})
+	.Asynchronous()
+	.Category(CATEGORY)
+	.FunctionHelp(L"Request matching symbols for a given symbol.")
+);
+void WINAPI xll_req_matching_symbols(HANDLEX h, const char* pattern, LPOPER asyncHandle)
+{
+#pragma XLLEXPORT
+	try {
+		handle<Wrapper> h_(h);
+		ensure(h_);
+		const auto pssw = h_.as<SymbolSamplesWrapper>();
+		ensure(pssw);
+		pssw->client.reqMatchingSymbols(pssw->orderId, pattern);
+		std::thread(reqMatchingSymbols, *asyncHandle, pssw).detach();
+	}
+	catch (const std::exception& ex) {
+		XLL_ERROR(ex.what());
+	}
+}
+#if 0
 AddIn xai_Wrapper(
 	Function(XLL_HANDLEX, L"xll_Wrapper", L"\\" CATEGORY L".Wrapper")
 	.Arguments({ 
@@ -154,3 +234,4 @@ void WINAPI xll_reqMktData(HANDLEX hWrapper, const char* symbol, LPOPER asyncHan
 		XLL_ERROR(ex.what());
 	}
 }
+#endif // 0

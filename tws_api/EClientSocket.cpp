@@ -241,10 +241,10 @@ void EClientSocket::eDisconnect(bool resetState)
   if (m_pEReader)
     m_pEReader->stop();
 
-  if (m_fd >= 0)
+  if (m_fd != INVALID_SOCKET)
     // close socket
     SocketClose(m_fd);
-  m_fd = -1;
+  m_fd = INVALID_SOCKET;
 
   if (resetState) {
     eDisconnectBase();
@@ -253,7 +253,7 @@ void EClientSocket::eDisconnect(bool resetState)
 
 bool EClientSocket::isSocketOK() const
 {
-  return (m_fd >= 0);
+  return (m_fd != INVALID_SOCKET);
 }
 
 SOCKET EClientSocket::fd() const
@@ -261,7 +261,7 @@ SOCKET EClientSocket::fd() const
   return m_fd;
 }
 
-int EClientSocket::receive(char* buf, size_t sz)
+int EClientSocket::receive(char* buf, int sz)
 {
   if (sz <= 0)
     return 0;

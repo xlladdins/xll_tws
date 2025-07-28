@@ -372,7 +372,7 @@ public:
 
 private:
 
-	virtual int receive(char* buf, size_t sz) = 0;
+	virtual int receive(char* buf, int sz) = 0;
 	static bool isAsciiPrintable(const std::string& s);
 
 protected:

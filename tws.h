@@ -96,18 +96,17 @@ namespace tws {
 		}
 		const char* what() const override
 		{
-			return errorString.c_str();
+			return errorString.c_str(); // TODO: include id, errorTime, advancedOrderRejectJson
 		}
 	};
 
 
-	// Value type to hold different tick data types
-	using Value = std::variant<double, Decimal, std::string>;
+	// Value type to hold TWS callback data.
+	using Value = std::variant<bool, int, long, long long, const char*, double, Decimal, std::string>;
 
 	// Wrapper class to manage the connection and provide a default EWrapper implementation
 	class Wrapper : public EWrapper {
 	public:
-		std::map<TickerId, std::map<TickType, Value>> tickData;
 		OrderId orderId;
 		EReaderOSSignal signal;
 		EClientSocket client;
@@ -115,11 +114,17 @@ namespace tws {
 		Wrapper(const char* host = "127.0.0.1", int port = 7497, int clientId = 0, int timeout = 1000/*ms*/)
 			: EWrapper(), orderId(0), signal(timeout), client(this, &signal)
 		{
-			if (!client.isConnected()) {
+			//if (!client.isConnected()) {
 				client.setConnectOptions("+PACEAPI");
 				ensure(client.eConnect(host, port, clientId));
-			}
+			//}
 		}
+		/*
+		Wrapper(const Wrapper&) = delete; 
+		Wrapper& operator=(const Wrapper&) = delete; 
+		Wrapper(Wrapper&&) = default; 
+		Wrapper& operator=(Wrapper&&) = default; 
+		*/
 		virtual ~Wrapper()
 		{
 			if (client.isConnected()) {
@@ -146,7 +151,6 @@ namespace tws {
 		std::condition_variable symbolCv;
 		bool symbolReady = false;
  		public:
-		std::vector<ContractDescription> contractDescriptions;
 		SymbolSamplesWrapper() = default;
 		~SymbolSamplesWrapper() = default;
 		void symbolSamples(int reqId, const std::vector<ContractDescription>& contractDescriptions) override
@@ -156,7 +160,18 @@ namespace tws {
 			symbolReady = true;
 			symbolCv.notify_all();
 		}
-		std::vector<ContractDescription> searchSymbols(const std::string& pattern) {
+		std::vector<ContractDescription> reqMatchingSymbols(const std::string& pattern) 
+		{
+			client.reqMatchingSymbols(orderId, pattern);
+			EReader reader(&client, &signal);
+			reader.start();
+			for (int i = 0; i < 10 && !symbolReady; ++i) {
+				signal.waitForSignal();
+				reader.processMsgs();
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			}
+			return symbolResults;
+			/*
 			{
 				std::lock_guard<std::mutex> lock(symbolMutex);
 				symbolReady = false;
@@ -165,6 +180,7 @@ namespace tws {
 			std::unique_lock<std::mutex> lock(symbolMutex);
 			symbolCv.wait(lock, [this] { return symbolReady; });
 			return symbolResults;
+			*/
 		}
 	};
 
@@ -191,13 +207,12 @@ namespace tws {
 
 	class MktDataWrapper : public Wrapper {
 	public:
-
 		MktDataWrapper()
 			: Wrapper()
 		{
 		}
 		~MktDataWrapper() {}
-
+		/*
 		void tickPrice(TickerId tickerId, TickType field, double price, const TickAttrib& attrib) override
 		{
 			tickData[tickerId][field] = price;
@@ -214,31 +229,9 @@ namespace tws {
 		{
 			tickData[tickerId][tickType] = value;
 		}
+		*/
 	};
 
-
-	struct Stock : public Contract
-	{
-		Stock(std::string_view symbol)
-			: Contract()
-		{
-			this->symbol = symbol;
-			this->secType = "STK";
-			this->currency = "USD"; // Default currency
-			this->exchange = "SMART"; // Default exchange
-		}
-	};
-
-	struct Option : public Contract
-	{
-		Option(std::string_view symbol)
-			: Contract()
-		{
-			this->symbol = symbol;
-			this->secType = "OPT";
-			this->currency = "USD"; // Default currency
-		}
-	};
 
 	struct Futures : public Contract
 	{
@@ -261,5 +254,29 @@ namespace tws {
 			this->currency = "USD"; // Default currency
 		}
 	};
+
+	struct Option : public Contract
+	{
+		Option(std::string_view symbol)
+			: Contract()
+		{
+			this->symbol = symbol;
+			this->secType = "OPT";
+			this->currency = "USD"; // Default currency
+		}
+	};
+
+	struct Stock : public Contract
+	{
+		Stock(std::string_view symbol)
+			: Contract()
+		{
+			this->symbol = symbol;
+			this->secType = "STK";
+			this->currency = "USD"; // Default currency
+			this->exchange = "SMART"; // Default exchange
+		}
+	};
+
 
 } // namespace tws
