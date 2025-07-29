@@ -1,11 +1,30 @@
 # xll_tws
 
-Call TWS API from Excel.
+Call Ineractive Brokers C++ API from Excel.
 
-The [`EWrapper`](https://interactivebrokers.github.io/tws-api/interfaceIBApi_1_1EWrapper.html)
-class implements the callbacks that are requested by calls to 
+IB Gateway is a program that allows you to connect to Interactive Brokers servers
+and write programs to automate Trader Workstation. They do not provide a library
+that you can link to, they provide header and source files you must incorporate
+into your program. Their GitHub [repository](https://github.com/InteractiveBrokers/tws-api)
+does not compile out of the box.
+
+The [`EWrapper`](https://interactivebrokers.github.io/tws-api/interfaceIBApi_1_1EWrapper.html).
+class declares all callbacks their server might call as pure virtual functions
+so you must implement all of them if you try to inherit from it. This seemed like
+a poor design choice but since they provided the source code this was easy to fix.
+I modified [`EWrapper.h`](tws_api/EWrapper.h) to provide a default implementation
+```
+	#define EWRAPPER_VIRTUAL_IMPL {} // =0
+```	
+This makes it possible to inherit from `EWrapper` and override only the methods
+you are interested in.
+
+The [`EClientSocket`](https://interactivebrokers.github.io/tws-api/classIBApi_1_1EClientSocket.html)
+class is used to connect to the IB Gateway server and request data. It inherits from
 [`EClient`](https://interactivebrokers.github.io/tws-api/classIBApi_1_1EClient.html)
-member functions. The IB Gateway server places returned data in a queue
-that are processed by an [`EReader`](https://interactivebrokers.github.io/tws-api/classIBApi_1_1EReader.html).
-Each message is processed by the `processMsgs` method of the of the `EReader` and the appropriate
-`EWrapper` method is invoked.
+that uses a socket to send requests to the server to call functions implemented by the
+`EWrapper` subclass you provide. The constructor of `EClientSocket`
+takes a `EWrapper` and a `EReaderSignal`. The `EReaderSignal` is used to 
+signal any `EReader` running in a thread that data is available to read from the socket.
+
+

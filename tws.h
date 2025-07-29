@@ -65,7 +65,6 @@ namespace tws {
 		Unknown
 	};
 
-
 	struct Error : public std::exception {
 		int id;
 		time_t errorTime;
