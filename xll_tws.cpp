@@ -1,11 +1,20 @@
 #include <thread>
 #include "tws.h"
 #include "tws_tick_type.h"
-//#define __STDC_WANT_DEC_FP__ 
-//#include "libbid/LIBRARY/src/dfp754.h"
+#include "xll24/include/xll.h"
+
+#ifndef CATEGORY
+#define CATEGORY L"TWS"
+#endif
 
 using namespace tws;
 using namespace xll;
+
+// Convert long long to double. Faithful if LL < 2^53 = 10^16
+constexpr double lltod(long long ll)
+{
+	return static_cast<double>(ll);
+}
 
 // Use std::visit(value, visitor) to handle different types of values in the tick data.
 template<class... Ts>
@@ -16,13 +25,66 @@ const auto visitor = overloads
 	[](bool b) { return OPER(b); },
 	[](int i) { return OPER(i); },
 	[](long l) { return OPER(static_cast<int>(l)); },
-	[](long long ll) { return OPER(static_cast<double>(ll)); },
-	[](const char* s) { return OPER(s); },
+	[](long long ll) { return OPER(lltod(ll)); },
 	[](double d) { return OPER(d); },
 	[](Decimal d) { return OPER(DecimalFunctions::decimalToDouble(d)); },
-	[](const std::string& s) { return OPER(s.c_str()); }
+	[](const char* s) { return OPER(s); },
+	[](const std::string& s) { return OPER(s); }
 };
 
+inline OPER oContract(const Contract& c)
+{
+	OPER o({
+		OPER(L"conId"), OPER(lltod(c.conId)),
+		OPER(L"symbol"), OPER(c.symbol),
+		OPER(L"secType"), OPER(c.secType),
+		OPER(L"lastTradeDateOrContractMonth"), OPER(c.lastTradeDateOrContractMonth),
+		OPER(L"lastTradeDate"), OPER(c.lastTradeDate),
+		OPER(L"strike"), OPER(c.strike),
+		OPER(L"right"), OPER(c.right),
+		OPER(L"multiplier"), OPER(c.multiplier),
+		OPER(L"exchange"), OPER(c.exchange),
+		OPER(L"primaryExchange"), OPER(c.primaryExchange),
+		OPER(L"currency"), OPER(c.currency),
+		OPER(L"localSymbol"), OPER(c.localSymbol),
+		OPER(L"tradingClass"), OPER(c.tradingClass),
+		OPER(L"includeExpired"), OPER(c.includeExpired),
+		OPER(L"secIdType"), OPER(c.secIdType),
+		OPER(L"secId"), OPER(c.secId),
+		OPER(L"description"), OPER(c.description),
+		OPER(L"issuerId"), OPER(c.issuerId),
+		OPER(L"comboLegsDescrip"), OPER(c.comboLegsDescrip),
+		});
+	// Ignore comboLegs and deltaNeutralContract for now.
+	o.reshape(size(o) / 2, 2);
+
+	return o;
+}
+
+enum TickAttribEnum
+{
+	canAutoExecute = 1,
+	pastLimit = 2,
+	reOpen = 4
+};
+constexpr int TickAttribBits(const TickAttrib& attrib)
+{
+	return attrib.canAutoExecute * canAutoExecute
+		+ attrib.pastLimit * pastLimit
+		+ attrib.preOpen * reOpen;
+}
+#ifdef _DEBUG
+static_assert(TickAttribBits(TickAttrib{}) == 0);
+static_assert(TickAttribBits(TickAttrib{ false, true, true }) == 6);
+#endif // _DEBUG
+/*
+struct TickPrice {
+	void tickPrice(TickerId tickerId, TickType field, double price, const TickAttrib& attrib) override
+	{
+	}
+};
+*/
+//struct SymbolSamples
 //static Wrapper wrapper; // host, port, clientId, timeout);
 
 
@@ -59,7 +121,7 @@ void WINAPI reqMatchingSymbols(OPER&& asyncHandle, SymbolSamplesWrapper* pssw)
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 		OPER o;
 		for (const auto& cr : pssw->symbolResults) {
-			o.hstack(OPER(cr.contract.symbol.c_str()));
+			o.hstack(OPER(cr.contract.symbol));
 		}
 		Excel12(xlAsyncReturn, 0, 2, &asyncHandle, &o);
 	}
@@ -91,7 +153,7 @@ void WINAPI xll_req_matching_symbols(HANDLEX h, const char* pattern, LPOPER asyn
 		ensure(h_);
 		const auto pssw = h_.as<SymbolSamplesWrapper>();
 		ensure(pssw);
-		pssw->client.reqMatchingSymbols(pssw->orderId, pattern);
+		pssw->client.reqMatchingSymbols(pssw->Id, pattern);
 		std::thread(reqMatchingSymbols, *asyncHandle, pssw).detach();
 	}
 	catch (const std::exception& ex) {

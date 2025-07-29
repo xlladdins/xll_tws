@@ -8,11 +8,7 @@
 #include "tws_api/EClientSocket.h"
 #include "tws_api/EReaderOSSignal.h"
 #include "tws_api/EReader.h"
-#include "xll24/include/xll.h"
 
-#ifndef CATEGORY
-#define CATEGORY L"TWS"
-#endif
 
 // TwsSocketClientErrors.h
 #define TWS_CODE_MSG_PAIR(X) \
@@ -107,16 +103,16 @@ namespace tws {
 	// Wrapper class to manage the connection and provide a default EWrapper implementation
 	class Wrapper : public EWrapper {
 	public:
-		OrderId orderId;
+		long Id;
 		EReaderOSSignal signal;
 		EClientSocket client;
 		// Connect to client socket if necessary.
 		Wrapper(const char* host = "127.0.0.1", int port = 7497, int clientId = 0, int timeout = 1000/*ms*/)
-			: EWrapper(), orderId(0), signal(timeout), client(this, &signal)
+			: EWrapper(), Id(0), signal(timeout), client(this, &signal)
 		{
 			//if (!client.isConnected()) {
 				client.setConnectOptions("+PACEAPI");
-				ensure(client.eConnect(host, port, clientId));
+				client.eConnect(host, port, clientId);
 			//}
 		}
 		/*
@@ -139,9 +135,9 @@ namespace tws {
 			throw Error(id, errorTime, errorCode, errorString, advancedOrderRejectJson);
 		}
 
-		void nextValidId(OrderId orderId)
+		void nextValidId(long Id)
 		{
-			this->orderId = orderId;
+			this->Id = Id;
 		}
 	};
 
@@ -162,7 +158,7 @@ namespace tws {
 		}
 		std::vector<ContractDescription> reqMatchingSymbols(const std::string& pattern) 
 		{
-			client.reqMatchingSymbols(orderId, pattern);
+			client.reqMatchingSymbols(Id, pattern);
 			EReader reader(&client, &signal);
 			reader.start();
 			for (int i = 0; i < 10 && !symbolReady; ++i) {
@@ -176,11 +172,27 @@ namespace tws {
 				std::lock_guard<std::mutex> lock(symbolMutex);
 				symbolReady = false;
 			}
-			client.reqMatchingSymbols(orderId, pattern);
+			client.reqMatchingSymbols(Id, pattern);
 			std::unique_lock<std::mutex> lock(symbolMutex);
 			symbolCv.wait(lock, [this] { return symbolReady; });
 			return symbolResults;
 			*/
+		}
+	};
+
+	class ContractDetailsWrapper : public Wrapper {
+		ContractDetails details;
+	public:
+		void contractDetails(int reqId, const ContractDetails& details) override
+		{
+			this->details = details;
+		}
+		void contractDetailsEnd(int reqId) override 
+		{
+			reqId = reqId;
+		}
+		void req(const Contract& contract) {
+			client.reqContractDetails(Id, contract);
 		}
 	};
 
