@@ -1,6 +1,6 @@
 # xll_tws
 
-Call Ineractive Brokers C++ API from Excel.
+Call Interactive Brokers C++ API from Excel.
 
 IB Gateway is a program that allows you to connect to Interactive Brokers servers
 and write programs to automate Trader Workstation. They do not provide a library
