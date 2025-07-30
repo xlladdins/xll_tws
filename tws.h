@@ -45,6 +45,23 @@
 
 namespace tws {
 
+	enum TickAttribEnum
+	{
+		canAutoExecute = 1,
+		pastLimit = 2,
+		reOpen = 4
+	};
+	constexpr int TickAttribBits(const TickAttrib& attrib)
+	{
+		return attrib.canAutoExecute * canAutoExecute
+			+ attrib.pastLimit * pastLimit
+			+ attrib.preOpen * reOpen;
+	}
+#ifdef _DEBUG
+	static_assert(TickAttribBits(TickAttrib{}) == 0);
+	static_assert(TickAttribBits(TickAttrib{ false, true, true }) == 6);
+#endif // _DEBUG
+
 	// Convert time_t to a localtime string using format.
 	inline std::string formatTime(time_t t, const char* format) {
 		struct tm* timeinfo = localtime(&t);
@@ -64,7 +81,21 @@ namespace tws {
 		Information,
 		Unknown
 	};
+	constexpr ErrorType errorType(int errorCode)
+	{
+		// Error codes (partial list, expand as needed)
+		if (100 <= errorCode && errorCode <= 999)
+			return ErrorType::Error;
+		// Warnings
+		if (errorCode == 2104 || errorCode == 2106 || errorCode == 2107 || errorCode == 2108)
+			return ErrorType::Warning;
+		// Informational
+		if (errorCode == 2103 || errorCode == 2105 || errorCode == 2158)
+			return ErrorType::Information;
+		// Add more codes as needed
 
+		return ErrorType::Unknown;
+	}
 
 	struct Error : public std::exception {
 		int id;
@@ -75,21 +106,7 @@ namespace tws {
 		Error(int id, time_t errorTime, int errorCode, const std::string& errorString, const std::string& advancedOrderRejectJson)
 			: id(id), errorTime(errorTime), errorCode(errorCode), errorString(errorString), advancedOrderRejectJson(advancedOrderRejectJson) {
 		}
-		ErrorType errorType() const
-		{
-			// Error codes (partial list, expand as needed)
-			if (100 <= errorCode && errorCode <= 999)
-				return ErrorType::Error;
-			// Warnings
-			if (errorCode == 2104 || errorCode == 2106 || errorCode == 2107 || errorCode == 2108)
-				return ErrorType::Warning;
-			// Informational
-			if (errorCode == 2103 || errorCode == 2105 || errorCode == 2158)
-				return ErrorType::Information;
-			// Add more codes as needed
 
-			return ErrorType::Unknown;
-		}
 		const char* what() const override
 		{
 			return errorString.c_str(); // TODO: include id, errorTime, advancedOrderRejectJson
@@ -132,7 +149,9 @@ namespace tws {
 
 		void error(int id, time_t errorTime, int errorCode, const std::string& errorString, const std::string& advancedOrderRejectJson) override
 		{
-			throw Error(id, errorTime, errorCode, errorString, advancedOrderRejectJson);
+			if (errorType(errorCode) == ErrorType::Error) {
+				throw tws::Error(id, errorTime, errorCode, errorString, advancedOrderRejectJson);
+			}
 		}
 
 		void nextValidId(long Id)
@@ -141,14 +160,14 @@ namespace tws {
 		}
 	};
 
-	struct SymbolSamplesWrapper : public Wrapper {
+	struct MatchingSymbolsWrapper : public Wrapper {
 		std::vector<ContractDescription> symbolResults;
 		std::mutex symbolMutex;
 		std::condition_variable symbolCv;
 		bool symbolReady = false;
  		public:
-		SymbolSamplesWrapper() = default;
-		~SymbolSamplesWrapper() = default;
+		MatchingSymbolsWrapper() = default;
+		~MatchingSymbolsWrapper() = default;
 		void symbolSamples(int reqId, const std::vector<ContractDescription>& contractDescriptions) override
 		{
 			std::lock_guard<std::mutex> lock(symbolMutex);
@@ -156,17 +175,18 @@ namespace tws {
 			symbolReady = true;
 			symbolCv.notify_all();
 		}
-		std::vector<ContractDescription> reqMatchingSymbols(const std::string& pattern) 
+		void reqMatchingSymbols(const std::string& pattern) 
 		{
 			client.reqMatchingSymbols(Id, pattern);
 			EReader reader(&client, &signal);
+			//std::unique_lock<std::mutex> lock(symbolMutex);
+			//symbolCv.wait(lock, [this] { return symbolReady; });
 			reader.start();
-			for (int i = 0; i < 10 && !symbolReady; ++i) {
+			while (!symbolReady) {
 				signal.waitForSignal();
 				reader.processMsgs();
-				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				//std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			}
-			return symbolResults;
 			/*
 			{
 				std::lock_guard<std::mutex> lock(symbolMutex);

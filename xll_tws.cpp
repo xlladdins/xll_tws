@@ -61,22 +61,6 @@ inline OPER oContract(const Contract& c)
 	return o;
 }
 
-enum TickAttribEnum
-{
-	canAutoExecute = 1,
-	pastLimit = 2,
-	reOpen = 4
-};
-constexpr int TickAttribBits(const TickAttrib& attrib)
-{
-	return attrib.canAutoExecute * canAutoExecute
-		+ attrib.pastLimit * pastLimit
-		+ attrib.preOpen * reOpen;
-}
-#ifdef _DEBUG
-static_assert(TickAttribBits(TickAttrib{}) == 0);
-static_assert(TickAttribBits(TickAttrib{ false, true, true }) == 6);
-#endif // _DEBUG
 /*
 struct TickPrice {
 	void tickPrice(TickerId tickerId, TickType field, double price, const TickAttrib& attrib) override
@@ -89,7 +73,7 @@ struct TickPrice {
 
 
 AddIn xai_symbol_sample_wrapper(
-	Function(XLL_HANDLEX, L"xll_symbol_sample_wrapper", L"\\" CATEGORY L".SymbolSampleWrapper")
+	Function(XLL_HANDLEX, L"xll_symbol_sample_wrapper", L"\\" CATEGORY L".MatchingSymbolsWrapper")
 	.Uncalced()
 	.Category(CATEGORY)
 	.FunctionHelp(L"Return handle to symbol sample wrapper.")
@@ -100,7 +84,7 @@ HANDLEX WINAPI xll_symbol_sample_wrapper()
 	HANDLEX h = INVALID_HANDLEX;
 
 	try {
-		handle<Wrapper> h_(new SymbolSamplesWrapper());
+		handle<Wrapper> h_(new MatchingSymbolsWrapper());
 		ensure(h_);
 		h = h_.get();
 	}
@@ -111,7 +95,7 @@ HANDLEX WINAPI xll_symbol_sample_wrapper()
 	return h;
 }
 
-void WINAPI reqMatchingSymbols(OPER&& asyncHandle, SymbolSamplesWrapper* pssw)
+void WINAPI reqMatchingSymbols(OPER&& asyncHandle, MatchingSymbolsWrapper* pssw)
 {
 	try {
 		EReader reader(&pssw->client, &pssw->signal);
@@ -136,7 +120,7 @@ void WINAPI reqMatchingSymbols(OPER&& asyncHandle, SymbolSamplesWrapper* pssw)
 }
 
 AddIn xai_req_matching_symbols(
-	Function(XLL_VOID, L"xll_req_matching_symbols", L"\\" CATEGORY L".reqMatchingSymbols")
+	Function(XLL_VOID, L"xll_req_matching_symbols", CATEGORY L".reqMatchingSymbols")
 	.Arguments({ 
 		Arg(XLL_HANDLEX, L"handle", L"symbol sample handle."),	
 		Arg(XLL_CSTRING4, L"pattern", L"either start of ticker symbol or (for larger strings) company name.")
@@ -149,12 +133,16 @@ void WINAPI xll_req_matching_symbols(HANDLEX h, const char* pattern, LPOPER asyn
 {
 #pragma XLLEXPORT
 	try {
+		o = OPER();
 		handle<Wrapper> h_(h);
 		ensure(h_);
-		const auto pssw = h_.as<SymbolSamplesWrapper>();
+		const auto pssw = h_.as<MatchingSymbolsWrapper>();
 		ensure(pssw);
-		pssw->client.reqMatchingSymbols(pssw->Id, pattern);
-		std::thread(reqMatchingSymbols, *asyncHandle, pssw).detach();
+		pssw->reqMatchingSymbols(pattern);
+		for (const auto& cr : pssw->symbolResults) {
+			o.append(OPER(cr.contract.symbol));
+		}
+		o.reshape(size(o), 1);
 	}
 	catch (const std::exception& ex) {
 		XLL_ERROR(ex.what());
