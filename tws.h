@@ -189,7 +189,7 @@ namespace tws {
 		std::vector<ContractDescription> symbolResults;
 		//std::mutex symbolMutex;
 		//std::condition_variable symbolCv;
-		bool symbolReady = false;
+		bool done = false;
  		public:
 		MatchingSymbolsWrapper() = default;
 		~MatchingSymbolsWrapper() = default;
@@ -197,28 +197,28 @@ namespace tws {
 		void reset()
 		{
 			symbolResults.clear();
-			symbolReady = false;
+			done = false;
 		}
 		void symbolSamples(int reqId, const std::vector<ContractDescription>& contractDescriptions) override
 		{
 			//std::lock_guard<std::mutex> lock(symbolMutex);
 			symbolResults = contractDescriptions;
-			symbolReady = true;
+			done = true;
 			//symbolCv.notify_all();
 		}
-		void reqMatchingSymbols(const char* pattern) 
+		void req(const char* pattern) 
 		{
 			//std::unique_lock<std::mutex> lock(symbolMutex);
 			//symbolCv.wait(lock, [this] { return symbolReady; });
-			connect();
+			//connect();
 			EReader reader(&client, &signal);
 			reader.start();
 			client.reqMatchingSymbols(Id, pattern); 
-			while (!symbolReady) {
+			while (!done) {
 				signal.waitForSignal();
 				reader.processMsgs();
 			}
-			reader.stop();
+			//reader.stop();
 			/*
 			{
 				std::lock_guard<std::mutex> lock(symbolMutex);
@@ -234,6 +234,7 @@ namespace tws {
 
 	class ContractDetailsWrapper : public Wrapper {
 		ContractDetails details;
+		bool done = false;
 	public:
 		void contractDetails(int reqId, const ContractDetails& details) override
 		{
@@ -242,9 +243,16 @@ namespace tws {
 		void contractDetailsEnd(int reqId) override 
 		{
 			reqId = reqId;
+			done = true;
 		}
 		void req(const Contract& contract) {
+			EReader reader(&client, &signal);
+			reader.start();
 			client.reqContractDetails(Id, contract);
+			while (!done) {
+				signal.waitForSignal();
+				reader.processMsgs();
+			}
 		}
 	};
 
@@ -296,7 +304,7 @@ namespace tws {
 		*/
 	};
 
-
+	// https://interactivebrokers.github.io/tws-api/basic_contracts.html
 	struct Futures : public Contract
 	{
 		Futures(std::string_view symbol)

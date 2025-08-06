@@ -32,33 +32,322 @@ const auto visitor = overloads
 	[](const std::string& s) { return OPER(s); }
 };
 
+// https://interactivebrokers.github.io/tws-api/basic_contracts.html
+const OPER oContractHeader({
+	OPER(L"conId"), OPER(L"symbol"),
+	OPER(L"secType"),
+	OPER(L"lastTradeDateOrContractMonth"),
+	OPER(L"lastTradeDate"),
+	OPER(L"strike"),
+	OPER(L"right"),
+	OPER(L"multiplier"),
+	OPER(L"exchange"),
+	OPER(L"primaryExchange"),
+	OPER(L"currency"),
+	OPER(L"localSymbol"),
+	OPER(L"tradingClass"),
+	OPER(L"includeExpired"),
+	OPER(L"secIdType"),
+	OPER(L"secId"),
+	OPER(L"description"),
+	OPER(L"issuerId"),
+	OPER(L"comboLegsDescrip")
+});
 inline OPER oContract(const Contract& c)
 {
-	OPER o({
-		OPER(L"conId"), OPER(lltod(c.conId)),
-		OPER(L"symbol"), OPER(c.symbol),
-		OPER(L"secType"), OPER(c.secType),
-		OPER(L"lastTradeDateOrContractMonth"), OPER(c.lastTradeDateOrContractMonth),
-		OPER(L"lastTradeDate"), OPER(c.lastTradeDate),
-		OPER(L"strike"), OPER(c.strike),
-		OPER(L"right"), OPER(c.right),
-		OPER(L"multiplier"), OPER(c.multiplier),
-		OPER(L"exchange"), OPER(c.exchange),
-		OPER(L"primaryExchange"), OPER(c.primaryExchange),
-		OPER(L"currency"), OPER(c.currency),
-		OPER(L"localSymbol"), OPER(c.localSymbol),
-		OPER(L"tradingClass"), OPER(c.tradingClass),
-		OPER(L"includeExpired"), OPER(c.includeExpired),
-		OPER(L"secIdType"), OPER(c.secIdType),
-		OPER(L"secId"), OPER(c.secId),
-		OPER(L"description"), OPER(c.description),
-		OPER(L"issuerId"), OPER(c.issuerId),
-		OPER(L"comboLegsDescrip"), OPER(c.comboLegsDescrip),
-		});
-	// Ignore comboLegs and deltaNeutralContract for now.
-	o.reshape(size(o) / 2, 2);
+	return OPER({
+		OPER(lltod(c.conId)),
+		OPER(c.symbol),
+		OPER(c.secType),
+		OPER(c.lastTradeDateOrContractMonth),
+		OPER(c.lastTradeDate),
+		OPER(c.strike),
+		OPER(c.right),
+		OPER(c.multiplier),
+		OPER(c.exchange),
+		OPER(c.primaryExchange),
+		OPER(c.currency),
+		OPER(c.localSymbol),
+		OPER(c.tradingClass),
+		OPER(c.includeExpired),
+		OPER(c.secIdType),
+		OPER(c.secId),
+		OPER(c.description),
+		OPER(c.issuerId),
+		OPER(c.comboLegsDescrip),
+	});
+}
+// Vlookup 2 column range of key, value
+static inline OPER lookup(const OPER& key, const OPER& range)
+{
+	ensure(rows(range) == 2 || columns(range) == 2);
 
-	return o;
+	return Excel(rows(range) == 2 ? xlfHlookup : xlfVlookup, key, range, 2, false); // exact
+}
+inline Contract eContract(const OPER& o)
+{
+	Contract c;
+
+	for (const OPER& key : oContractHeader) {
+		if (key == (L"conId")) {
+			c.conId = Int(lookup(key, o));
+		}
+		else if (key == (L"symbol")) {
+			c.symbol = lookup(key, o).to_string();
+		}
+		else if (key == (L"secType")) {
+			c.secType = lookup(key, o).to_string();
+		}
+		else if (key == (L"lastTradeDateOrContractMonth")) {
+			c.lastTradeDateOrContractMonth = lookup(key, o).to_string();
+		}
+		else if (key == (L"lastTradeDate")) {
+			c.lastTradeDate = lookup(key, o).to_string();
+		}
+		else if (key == (L"strike")) {
+			c.strike = Num(lookup(key, o));
+		}
+		else if (key == (L"right")) {
+			c.right = lookup(key, o).to_string();
+		}
+		else if (key == (L"multiplier")) {
+			c.multiplier = lookup(key, o).to_string();
+		}
+		else if (key == (L"exchange")) {
+			c.exchange = lookup(key, o).to_string();
+		}
+		else if (key == (L"primaryExchange")) {
+			c.primaryExchange = lookup(key, o).to_string();
+		}
+		else if (key == (L"currency")) {
+			c.currency = lookup(key, o).to_string();
+		}
+		else if (key == (L"localSymbol")) {
+			c.localSymbol = lookup(key, o).to_string();
+		}
+		else if (key == (L"tradingClass")) {
+			c.tradingClass = lookup(key, o).to_string();
+		}
+		else if (key == (L"includeExpired")) {
+			c.includeExpired = static_cast<bool>(lookup(key, o));
+		}
+		else if (key == (L"secIdType")) {
+			c.secIdType = lookup(key, o).to_string();
+		}
+		else if (key == (L"secId")) {
+			c.secId = lookup(key, o).to_string();
+		}
+		else if (key == (L"description")) {
+			c.description = lookup(key, o).to_string();
+		}
+		else if (key == (L"issuerId")) {
+			c.issuerId = lookup(key, o).to_string();
+		}
+		else if (key == (L"comboLegsDescrip")) {
+			c.comboLegsDescrip = lookup(key, o).to_string();
+		}
+	}
+
+	return c;
+}
+
+const OPER oContractDetailsHeader({
+	// Contract
+	OPER(L"marketName"),
+	OPER(L"minTick"),
+	OPER(L"orderTypes"),
+	OPER(L"validExchanges"),
+	OPER(L"priceMagnifier"),
+	OPER(L"underConId"),
+	OPER(L"longName"),
+	OPER(L"contractMonth"),
+	OPER(L"industry"),
+	OPER(L"category"),
+	OPER(L"subcategory"),
+	OPER(L"timeZoneId"),
+	OPER(L"tradingHours"),
+	OPER(L"liquidHours"),
+	OPER(L"evRule"),
+	OPER(L"evMultiplier"),
+	OPER(L"aggGroup"),
+	OPER(L"underSymbol"),
+	OPER(L"underSecType"),
+	OPER(L"marketRuleIds"),
+	OPER(L"realExpirationDate"),
+	OPER(L"lastTradeTime"),
+	OPER(L"stockType"),
+	OPER(L"minSize"),
+	OPER(L"sizeIncrement"),
+	OPER(L"suggestedSizeIncrement"),
+	// more BOND and FUND fields could be added here
+	});
+inline OPER oContractDetails(const ContractDetails& cd)
+{
+	return OPER({
+		OPER(cd.marketName),
+		OPER(cd.minTick),
+		OPER(cd.orderTypes),
+		OPER(cd.validExchanges),
+		OPER(lltod(cd.priceMagnifier)),
+		OPER(cd.underConId),
+		OPER(cd.longName),
+		OPER(cd.contractMonth),
+		OPER(cd.industry),
+		OPER(cd.category),
+		OPER(cd.subcategory),
+		OPER(cd.timeZoneId),
+		OPER(cd.tradingHours),
+		OPER(cd.liquidHours),
+		OPER(cd.evRule),
+		OPER(cd.evMultiplier),
+		OPER(cd.aggGroup),
+		OPER(cd.underSymbol),
+		OPER(cd.underSecType),
+		OPER(cd.marketRuleIds),
+		OPER(cd.realExpirationDate),
+		OPER(cd.lastTradeTime),
+		OPER(cd.stockType),
+		OPER(DecimalFunctions::decimalToDouble(cd.minSize)),
+		OPER(DecimalFunctions::decimalToDouble(cd.sizeIncrement)),
+		OPER(DecimalFunctions::decimalToDouble(cd.suggestedSizeIncrement)),
+		});
+}
+inline ContractDetails eContractDetails(const OPER& o)
+{
+	ContractDetails cd;
+
+	for (const OPER& key : oContractDetailsHeader) {
+		if (key == (L"marketName")) {
+			cd.marketName = lookup(key, o).to_string();
+		}
+		else if (key == (L"minTick")) {
+			cd.minTick = Num(lookup(key, o));
+		}
+		else if (key == (L"orderTypes")) {
+			cd.orderTypes = lookup(key, o).to_string();
+		}
+		else if (key == (L"validExchanges")) {
+			cd.validExchanges = lookup(key, o).to_string();
+		}
+		else if (key == (L"priceMagnifier")) {
+			cd.priceMagnifier = Int(lookup(key, o));
+		}
+		else if (key == (L"underConId")) {
+			cd.underConId = Int(lookup(key, o));
+		}
+		else if (key == (L"longName")) {
+			cd.longName = lookup(key, o).to_string();
+		}
+		else if (key == (L"contractMonth")) {
+			cd.contractMonth = lookup(key, o).to_string();
+		}
+		else if (key == (L"industry")) {
+			cd.industry = lookup(key, o).to_string();
+		}
+		else if (key == (L"category")) {
+			cd.category = lookup(key, o).to_string();
+		}
+		else if (key == (L"subcategory")) {
+			cd.subcategory = lookup(key, o).to_string();
+		}
+		else if (key == (L"timeZoneId")) {
+			cd.timeZoneId = lookup(key, o).to_string();
+		}
+		else if (key == (L"tradingHours")) {
+			cd.tradingHours = lookup(key, o).to_string();
+		}
+		else if (key == (L"liquidHours")) {
+			cd.liquidHours = lookup(key, o).to_string();
+		}
+		else if (key == (L"evRule")) {
+			cd.evRule = lookup(key, o).to_string();
+		}
+		else if (key == (L"evMultiplier")) {
+			cd.evMultiplier = Num(lookup(key, o));
+		}
+		else if (key == (L"aggGroup")) {
+			cd.aggGroup = Int(lookup(key, o));
+		}
+		else if (key == (L"underSymbol")) {
+			cd.underSymbol = lookup(key, o).to_string();
+		}
+		else if (key == (L"underSecType")) {
+			cd.underSecType = lookup(key, o).to_string();
+		}
+		else if (key == (L"marketRuleIds")) {
+			cd.marketRuleIds = lookup(key, o).to_string();
+		}
+		else if (key == (L"realExpirationDate")) {
+			cd.realExpirationDate = lookup(key, o).to_string();
+		}
+		else if (key == (L"lastTradeTime")) {
+			cd.lastTradeTime = lookup(key, o).to_string();
+		}
+		else if (key == (L"stockType")) {
+			cd.stockType = lookup(key, o).to_string();
+		}
+		else if (key == (L"minSize")) {
+			cd.minSize = DecimalFunctions::doubleToDecimal(Num(lookup(key, o)));
+		}
+		else if (key == (L"sizeIncrement")) {
+			cd.sizeIncrement = DecimalFunctions::doubleToDecimal(Num(lookup(key, o)));
+		}
+		else if (key == (L"suggestedSizeIncrement")) {
+			cd.suggestedSizeIncrement = DecimalFunctions::doubleToDecimal(Num(lookup(key, o)));
+		}
+	}
+
+	return cd;
+}
+
+AddIn xai_contract_(
+	Function(XLL_HANDLEX, L"xll_contract_", L"\\" CATEGORY L".Contract")
+	.Arguments({
+		Arg(XLL_LPOPER, L"contract", L"key-value pairs for a contract.")
+		})
+	.Uncalced()
+	.Category(CATEGORY)
+	.FunctionHelp(L"Return a contract handle from a key-value pair range.")
+);
+HANDLEX WINAPI xll_contract_(const LPOPER po)
+{
+#pragma XLLEXPORT
+	HANDLEX h = INVALID_HANDLEX;
+	try {
+		Contract c = eContract(*po);
+		handle<Contract> h_(new Contract(c));
+		ensure(h_);
+		h = h_.get();
+	}
+	catch (const std::exception& ex) {
+		XLL_ERROR(ex.what());
+	}
+	return h;
+}
+
+AddIn xai_contract(
+	Function(XLL_LPOPER, L"xll_contract", CATEGORY L".Contract")
+	.Arguments({
+		Arg(XLL_HANDLEX, L"handle", L"is a handle to a Contract.")
+		})
+	.Category(CATEGORY)
+	.FunctionHelp(L"Return key-value pairs for a given contract handle.")
+);
+LPOPER WINAPI xll_contract(HANDLEX h)
+{
+#pragma XLLEXPORT
+	static OPER o;
+	try {
+		o = ErrNA;
+		handle<Contract> h_(h);
+		ensure(h_);
+		o = oContractHeader;
+		o.vstack(oContract(*h_));
+	}
+	catch (const std::exception& ex) {
+		XLL_ERROR(ex.what());
+	}
+	return &o;
 }
 
 AddIn xai_server_version(
@@ -77,7 +366,8 @@ double WINAPI xll_server_version(HANDLEX h)
 		handle<Wrapper> h_(h);
 		ensure(h_);
 		ensure(h_->client.isConnected());
-		//version = h_->client.serverVersion();
+		EClient& ec = h_->client;
+		version = ec.serverVersion();
 	}
 	catch (const std::exception& ex) {
 		XLL_ERROR(ex.what());
@@ -86,7 +376,7 @@ double WINAPI xll_server_version(HANDLEX h)
 }
 
 AddIn xai_matching_symbols_wrapper(
-	Function(XLL_HANDLEX, L"xll_matching_symbols_wrapper", L"\\" CATEGORY L".MatchingSymbolsWrapper")
+	Function(XLL_HANDLEX, L"xll_matching_symbols_wrapper", L"\\" CATEGORY L".MatchingSymbols")
 	.Uncalced()
 	.Category(CATEGORY)
 	.FunctionHelp(L"Return handle to symbol sample wrapper.")
@@ -111,7 +401,7 @@ HANDLEX WINAPI xll_matching_symbols_wrapper()
 void WINAPI reqMatchingSymbols(OPER&& asyncHandle, MatchingSymbolsWrapper* pssw)
 {
 	try {
-		pssw->reqMatchingSymbols();
+		pssw->req();
 		OPER o;
 		for (const auto& cr : pssw->symbolResults) {
 			o.hstack(OPER(cr.contract.symbol));
@@ -131,8 +421,8 @@ void WINAPI reqMatchingSymbols(OPER&& asyncHandle, MatchingSymbolsWrapper* pssw)
 
 AddIn xai_req_matching_symbols(
 	Function(XLL_VOID, L"xll_req_matching_symbols", CATEGORY L".reqMatchingSymbols")
-	.Arguments({ 
-		Arg(XLL_HANDLEX, L"handle", L"symbol sample handle."),	
+	.Arguments({
+		Arg(XLL_HANDLEX, L"handle", L"symbol sample handle."),
 		Arg(XLL_CSTRING4, L"pattern", L"either start of ticker symbol or (for larger strings) company name.")
 	})
 	.Asynchronous()
@@ -156,7 +446,7 @@ void WINAPI xll_req_matching_symbols(HANDLEX h, const char* pattern, LPOPER asyn
 }
 */
 AddIn xai_req_matching_symbols(
-	Function(XLL_LPOPER, L"xll_req_matching_symbols", CATEGORY L".reqMatchingSymbols")
+	Function(XLL_LPOPER, L"xll_req_matching_symbols", CATEGORY L".MatchingSymbols")
 	.Arguments({
 		Arg(XLL_HANDLEX, L"handle", L"symbol sample handle."),
 		Arg(XLL_CSTRING4, L"pattern", L"either start of ticker symbol or (for larger strings) company name.")
@@ -174,16 +464,11 @@ LPOPER WINAPI xll_req_matching_symbols(HANDLEX h, const char* pattern)
 		ensure(h_);
 		const auto pssw = h_.as<MatchingSymbolsWrapper>();
 		ensure(pssw);
-		pssw->reqMatchingSymbols(pattern);
-		o = OPER({OPER(L"conId"), OPER(L"symbol"), OPER(L"secType"), OPER("primaryExchange"), OPER(L"currency")});
-		for (const auto& cr : pssw->symbolResults) {
-			o.append(OPER(lltod(cr.contract.conId)));
-			o.append(OPER(cr.contract.symbol));
-			o.append(OPER(cr.contract.secType));
-			o.append(OPER(cr.contract.primaryExchange));
-			o.append(OPER(cr.contract.currency));
+		pssw->req(pattern);
+		o = oContractHeader;
+		for (const ContractDescription& cd : pssw->symbolResults) {
+			o.vstack(oContract(cd.contract));
 		}
-		o.reshape(size(o) / 5, 5);
 		pssw->reset();
 	}
 	catch (const std::exception& ex) {
@@ -192,15 +477,70 @@ LPOPER WINAPI xll_req_matching_symbols(HANDLEX h, const char* pattern)
 
 	return &o;
 }
+
+AddIn xai_contract_details_wrapper(
+	Function(XLL_HANDLEX, L"xll_contract_details_wrapper", L"\\" CATEGORY L"ContractDetails")
+	.Uncalced()
+	.Category(CATEGORY)
+	.FunctionHelp(L"Return handle to contract details wrapper.")
+);
+HANDLEX WINAPI xll_contract_details_wrapper()
+{
+#pragma XLLEXPORT
+	HANDLEX h = INVALID_HANDLEX;
+	try {
+		handle<Wrapper> h_(new ContractDetailsWrapper());
+		ensure(h_);
+		h = h_.get();
+	}
+	catch (const std::exception& ex) {
+		XLL_ERROR(ex.what());
+	}
+	return h;
+}
+
+AddIn xai_req_contract_details(
+	Function(XLL_LPOPER, L"xll_req_contract_details", CATEGORY L".ContractDetails")
+	.Arguments({
+		Arg(XLL_HANDLEX, L"handle", L"contract details handle."),
+		Arg(XLL_LPOPER, L"contract", L"contract to request details for.")
+		})
+	.Category(CATEGORY)
+	.FunctionHelp(L"Request contract details for a given contract.")
+);
+LPOPER WINAPI xll_req_contract_details(HANDLEX h, const LPOPER po)
+{
+#pragma XLLEXPORT
+	static OPER o;
+	try {
+		handle<Wrapper> h_(h);
+		ensure(h_);
+		const auto pcdw = h_.as<ContractDetailsWrapper>();
+		ensure(pcdw);
+		Contract c = eContract(*po);
+		/*
+		pcdw->req(c);
+		o = oContractHeader;
+		for (const ContractDetails& cd : pcdw->contractDetailsResults) {
+			o.vstack(oContract(cd.contract));
+		}
+		pcdw->reset();
+		*/
+	}
+	catch (const std::exception& ex) {
+		XLL_ERROR(ex.what());
+	}
+	return &o;
+}
 #if 0
 AddIn xai_Wrapper(
 	Function(XLL_HANDLEX, L"xll_Wrapper", L"\\" CATEGORY L".Wrapper")
-	.Arguments({ 
+	.Arguments({
 		Arg(XLL_CSTRING4, L"host", L"Host name or IP address of the TWS or IB Gateway."),
 		Arg(XLL_INT, L"port", L"Port number of the TWS or IB Gateway."),
 		Arg(XLL_INT, L"clientId", L"Client ID for the connection."),
 		Arg(XLL_INT, L"timeout", L"Timeout in milliseconds for the connection.")
-	})
+		})
 	.Uncalced()
 	.Category(CATEGORY)
 	.FunctionHelp(L"Create a TWS API wrapper instance.")
@@ -241,9 +581,9 @@ XLL_CONST(INT, MarketDataType_DELAYED_FROZEN, MarketDataType::DELAYED_FROZEN, "R
 
 AddIn xai_MktData(
 	Function(XLL_HANDLEX, L"xll_MktData", L"\\" CATEGORY L".MktData")
-	.Arguments({ 
+	.Arguments({
 		Arg(XLL_INT, L"type", L"market data type from the MarketDataType_* enumeration.")
-	})
+		})
 	.Uncalced()
 	.Category(CATEGORY)
 	.FunctionHelp(L"Create a market data wrapper instance.")
@@ -306,8 +646,8 @@ AddIn xai_reqMktData(
 	.Arguments({
 		Arg(XLL_HANDLEX, L"hWrapper", L"Handle to the market data wrapper."),
 		Arg(XLL_CSTRING4, L"symbol", L"Symbol of the stock or option."),
-	})
-	.Asynchronous()
+		})
+		.Asynchronous()
 	.Category(CATEGORY)
 	.FunctionHelp(L"Request market data for a given symbol.")
 );
