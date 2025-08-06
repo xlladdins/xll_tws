@@ -63,10 +63,20 @@ namespace tws {
 #endif // _DEBUG
 
 	// Convert time_t to a localtime string using format.
-	inline std::string formatTime(time_t t, const char* format) {
-		struct tm* timeinfo = localtime(&t);
-		char buffer[20];
-		strftime(buffer, sizeof(buffer), format, timeinfo);
+	inline std::string formatTime(time_t t, const char* format) 
+	{
+		if (t % 1000 == 0) {
+			t /= 1000; // Convert milliseconds to seconds
+		}
+		struct tm timeinfo;
+		char buffer[20] = { 0 };
+		errno_t err = localtime_s(&timeinfo, &t);
+		if (err == 0) {
+			strftime(buffer, sizeof(buffer), format, &timeinfo);
+		}
+		else {
+			err = strerror_s(buffer, sizeof(buffer), err);
+		}
 
 		return std::string(buffer);
 	}
@@ -84,7 +94,7 @@ namespace tws {
 	constexpr ErrorType errorType(int errorCode)
 	{
 		// Error codes (partial list, expand as needed)
-		if (100 <= errorCode && errorCode <= 999)
+		if (100 <= errorCode && errorCode <= 1000)
 			return ErrorType::Error;
 		// Warnings
 		if (errorCode == 2104 || errorCode == 2106 || errorCode == 2107 || errorCode == 2108)
@@ -103,13 +113,16 @@ namespace tws {
 		int errorCode;
 		std::string errorString;
 		std::string advancedOrderRejectJson;
+		std::string what_;
 		Error(int id, time_t errorTime, int errorCode, const std::string& errorString, const std::string& advancedOrderRejectJson)
-			: id(id), errorTime(errorTime), errorCode(errorCode), errorString(errorString), advancedOrderRejectJson(advancedOrderRejectJson) {
+			: id(id), errorTime(errorTime), errorCode(errorCode), errorString(errorString), advancedOrderRejectJson(advancedOrderRejectJson) 
+		{
+			what_ = std::format("id: {} time: {} error: {}", errorCode, DateTime(errorTime), errorString);
 		}
 
 		const char* what() const override
 		{
-			return errorString.c_str(); // TODO: include id, errorTime, advancedOrderRejectJson
+			return what_.c_str();
 		}
 	};
 
@@ -120,17 +133,17 @@ namespace tws {
 	// Wrapper class to manage the connection and provide a default EWrapper implementation
 	class Wrapper : public EWrapper {
 	public:
-		long Id;
+		long Id; // static???
+		std::string host;
+		int port, clientId;
 		EReaderOSSignal signal;
 		EClientSocket client;
 		// Connect to client socket if necessary.
-		Wrapper(const char* host = "127.0.0.1", int port = 7497, int clientId = 0, int timeout = 1000/*ms*/)
-			: EWrapper(), Id(0), signal(timeout), client(this, &signal)
+		Wrapper(const char* _host = "127.0.0.1", int _port = 7497, int _clientId = 0, int timeout = 1000/*ms*/)
+			: EWrapper(), Id(1000), host(_host), port(_port), clientId(_clientId), signal(timeout), client(this, &signal)
 		{
-			//if (!client.isConnected()) {
-				client.setConnectOptions("+PACEAPI");
-				client.eConnect(host, port, clientId);
-			//}
+			client.setConnectOptions("+PACEAPI");
+			client.eConnect(host.c_str(), port, clientId);
 		}
 		/*
 		Wrapper(const Wrapper&) = delete; 
@@ -146,9 +159,21 @@ namespace tws {
 		}
 
 		// reset???
+		bool isConnected() const
+		{
+			return client.isConnected();
+		}
+		bool connect()
+		{
+			if (!client.isConnected()) {
+				client.eConnect(host.c_str(), port, clientId);
+			}
+			return client.isConnected();
+		}	
 
 		void error(int id, time_t errorTime, int errorCode, const std::string& errorString, const std::string& advancedOrderRejectJson) override
 		{
+			// Error time is in milliseconds since epoch
 			if (errorType(errorCode) == ErrorType::Error) {
 				throw tws::Error(id, errorTime, errorCode, errorString, advancedOrderRejectJson);
 			}
@@ -162,31 +187,38 @@ namespace tws {
 
 	struct MatchingSymbolsWrapper : public Wrapper {
 		std::vector<ContractDescription> symbolResults;
-		std::mutex symbolMutex;
-		std::condition_variable symbolCv;
+		//std::mutex symbolMutex;
+		//std::condition_variable symbolCv;
 		bool symbolReady = false;
  		public:
 		MatchingSymbolsWrapper() = default;
 		~MatchingSymbolsWrapper() = default;
+
+		void reset()
+		{
+			symbolResults.clear();
+			symbolReady = false;
+		}
 		void symbolSamples(int reqId, const std::vector<ContractDescription>& contractDescriptions) override
 		{
-			std::lock_guard<std::mutex> lock(symbolMutex);
+			//std::lock_guard<std::mutex> lock(symbolMutex);
 			symbolResults = contractDescriptions;
 			symbolReady = true;
-			symbolCv.notify_all();
+			//symbolCv.notify_all();
 		}
-		void reqMatchingSymbols(const std::string& pattern) 
+		void reqMatchingSymbols(const char* pattern) 
 		{
-			client.reqMatchingSymbols(Id, pattern);
-			EReader reader(&client, &signal);
 			//std::unique_lock<std::mutex> lock(symbolMutex);
 			//symbolCv.wait(lock, [this] { return symbolReady; });
+			connect();
+			EReader reader(&client, &signal);
 			reader.start();
+			client.reqMatchingSymbols(Id, pattern); 
 			while (!symbolReady) {
 				signal.waitForSignal();
 				reader.processMsgs();
-				//std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			}
+			reader.stop();
 			/*
 			{
 				std::lock_guard<std::mutex> lock(symbolMutex);

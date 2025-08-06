@@ -61,24 +61,37 @@ inline OPER oContract(const Contract& c)
 	return o;
 }
 
-/*
-struct TickPrice {
-	void tickPrice(TickerId tickerId, TickType field, double price, const TickAttrib& attrib) override
-	{
+AddIn xai_server_version(
+	Function(XLL_DOUBLE, L"xll_server_version", L"\\" CATEGORY L".ServerVersion")
+	.Arguments({
+		Arg(XLL_HANDLEX, L"handle", L"is a handle to an EWrapper.")
+		})
+	.Category(CATEGORY)
+	.FunctionHelp(L"Return the server version of the TWS or IB Gateway.")
+);
+double WINAPI xll_server_version(HANDLEX h)
+{
+#pragma XLLEXPORT
+	double version = INVALID_HANDLEX;
+	try {
+		handle<Wrapper> h_(h);
+		ensure(h_);
+		ensure(h_->client.isConnected());
+		//version = h_->client.serverVersion();
 	}
-};
-*/
-//struct SymbolSamples
-//static Wrapper wrapper; // host, port, clientId, timeout);
+	catch (const std::exception& ex) {
+		XLL_ERROR(ex.what());
+	}
+	return version;
+}
 
-
-AddIn xai_symbol_sample_wrapper(
-	Function(XLL_HANDLEX, L"xll_symbol_sample_wrapper", L"\\" CATEGORY L".MatchingSymbolsWrapper")
+AddIn xai_matching_symbols_wrapper(
+	Function(XLL_HANDLEX, L"xll_matching_symbols_wrapper", L"\\" CATEGORY L".MatchingSymbolsWrapper")
 	.Uncalced()
 	.Category(CATEGORY)
 	.FunctionHelp(L"Return handle to symbol sample wrapper.")
 );
-HANDLEX WINAPI xll_symbol_sample_wrapper()
+HANDLEX WINAPI xll_matching_symbols_wrapper()
 {
 #pragma XLLEXPORT
 	HANDLEX h = INVALID_HANDLEX;
@@ -94,19 +107,16 @@ HANDLEX WINAPI xll_symbol_sample_wrapper()
 
 	return h;
 }
-
+/*
 void WINAPI reqMatchingSymbols(OPER&& asyncHandle, MatchingSymbolsWrapper* pssw)
 {
 	try {
-		EReader reader(&pssw->client, &pssw->signal);
-		reader.start();
-		pssw->signal.waitForSignal();
-		reader.processMsgs();
-		std::this_thread::sleep_for(std::chrono::seconds(1));
+		pssw->reqMatchingSymbols();
 		OPER o;
 		for (const auto& cr : pssw->symbolResults) {
 			o.hstack(OPER(cr.contract.symbol));
 		}
+		pssw->reset();
 		Excel12(xlAsyncReturn, 0, 2, &asyncHandle, &o);
 	}
 	catch (const std::exception& ex) {
@@ -133,20 +143,54 @@ void WINAPI xll_req_matching_symbols(HANDLEX h, const char* pattern, LPOPER asyn
 {
 #pragma XLLEXPORT
 	try {
-		o = OPER();
+		handle<Wrapper> h_(h);
+		ensure(h_);
+		const auto pssw = h_.as<MatchingSymbolsWrapper>();
+		ensure(pssw);
+		pssw->client.reqMatchingSymbols(pssw->Id, pattern);
+		std::thread(reqMatchingSymbols, *asyncHandle, pssw).detach();
+	}
+	catch (const std::exception& ex) {
+		XLL_ERROR(ex.what());
+	}
+}
+*/
+AddIn xai_req_matching_symbols(
+	Function(XLL_LPOPER, L"xll_req_matching_symbols", CATEGORY L".reqMatchingSymbols")
+	.Arguments({
+		Arg(XLL_HANDLEX, L"handle", L"symbol sample handle."),
+		Arg(XLL_CSTRING4, L"pattern", L"either start of ticker symbol or (for larger strings) company name.")
+		})
+	.Category(CATEGORY)
+	.FunctionHelp(L"Request matching symbols for a given symbol.")
+);
+LPOPER WINAPI xll_req_matching_symbols(HANDLEX h, const char* pattern)
+{
+#pragma XLLEXPORT
+	static OPER o;
+
+	try {
 		handle<Wrapper> h_(h);
 		ensure(h_);
 		const auto pssw = h_.as<MatchingSymbolsWrapper>();
 		ensure(pssw);
 		pssw->reqMatchingSymbols(pattern);
+		o = OPER({OPER(L"conId"), OPER(L"symbol"), OPER(L"secType"), OPER("primaryExchange"), OPER(L"currency")});
 		for (const auto& cr : pssw->symbolResults) {
+			o.append(OPER(lltod(cr.contract.conId)));
 			o.append(OPER(cr.contract.symbol));
+			o.append(OPER(cr.contract.secType));
+			o.append(OPER(cr.contract.primaryExchange));
+			o.append(OPER(cr.contract.currency));
 		}
-		o.reshape(size(o), 1);
+		o.reshape(size(o) / 5, 5);
+		pssw->reset();
 	}
 	catch (const std::exception& ex) {
 		XLL_ERROR(ex.what());
 	}
+
+	return &o;
 }
 #if 0
 AddIn xai_Wrapper(
