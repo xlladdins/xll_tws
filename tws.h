@@ -4,7 +4,7 @@
 #include <mutex>
 #include <variant>
 #pragma warning(disable: 4267)
-#include "tws_api/EWrapper.h"
+#include "tws_api/DefaultEWrapper.h"
 #include "tws_api/EClientSocket.h"
 #include "tws_api/EReaderOSSignal.h"
 #include "tws_api/EReader.h"
@@ -130,17 +130,23 @@ namespace tws {
 	// Value type to hold TWS callback data.
 	using Value = std::variant<bool, int, long, long long, const char*, double, Decimal, std::string>;
 
+	inline long Id()
+	{
+		static long id = 1000; // Starting ID
+		return ++id;
+	}
+
 	// Wrapper class to manage the connection and provide a default EWrapper implementation
-	class Wrapper : public EWrapper {
+	class Wrapper : public DefaultEWrapper {
 	public:
-		long Id; // static???
 		std::string host;
 		int port, clientId;
 		EReaderOSSignal signal;
 		EClientSocket client;
+		EReader reader;
 		// Connect to client socket if necessary.
 		Wrapper(const char* _host = "127.0.0.1", int _port = 7497, int _clientId = 0, int timeout = 1000/*ms*/)
-			: EWrapper(), Id(1000), host(_host), port(_port), clientId(_clientId), signal(timeout), client(this, &signal)
+			: DefaultEWrapper(), host(_host), port(_port), clientId(_clientId), signal(timeout), client(this, &signal), reader(&client, &signal)
 		{
 			client.setConnectOptions("+PACEAPI");
 			client.eConnect(host.c_str(), port, clientId);
@@ -158,11 +164,6 @@ namespace tws {
 			}
 		}
 
-		// reset???
-		bool isConnected() const
-		{
-			return client.isConnected();
-		}
 		bool connect()
 		{
 			if (!client.isConnected()) {
@@ -173,7 +174,6 @@ namespace tws {
 
 		void error(int id, time_t errorTime, int errorCode, const std::string& errorString, const std::string& advancedOrderRejectJson) override
 		{
-			// Error time is in milliseconds since epoch
 			if (errorType(errorCode) == ErrorType::Error) {
 				throw tws::Error(id, errorTime, errorCode, errorString, advancedOrderRejectJson);
 			}
@@ -181,7 +181,7 @@ namespace tws {
 
 		void nextValidId(long Id)
 		{
-			this->Id = Id;
+			Id = Id;
 		}
 	};
 
@@ -210,15 +210,16 @@ namespace tws {
 		{
 			//std::unique_lock<std::mutex> lock(symbolMutex);
 			//symbolCv.wait(lock, [this] { return symbolReady; });
-			//connect();
-			EReader reader(&client, &signal);
+			reset();
+			connect();
+			//EReader reader(&client, &signal);
 			reader.start();
-			client.reqMatchingSymbols(Id, pattern); 
+			client.reqMatchingSymbols(Id(), pattern);
 			while (!done) {
 				signal.waitForSignal();
 				reader.processMsgs();
 			}
-			//reader.stop();
+			reader.stop();
 			/*
 			{
 				std::lock_guard<std::mutex> lock(symbolMutex);
@@ -245,10 +246,16 @@ namespace tws {
 			reqId = reqId;
 			done = true;
 		}
+		void reset()
+		{
+			done = false;
+		}
 		void req(const Contract& contract) {
+			reset();
+			connect();
 			EReader reader(&client, &signal);
 			reader.start();
-			client.reqContractDetails(Id, contract);
+			client.reqContractDetails(Id(), contract);
 			while (!done) {
 				signal.waitForSignal();
 				reader.processMsgs();

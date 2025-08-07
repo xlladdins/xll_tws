@@ -84,67 +84,96 @@ static inline OPER lookup(const OPER& key, const OPER& range)
 
 	return Excel(rows(range) == 2 ? xlfHlookup : xlfVlookup, key, range, 2, false); // exact
 }
+static inline std::string lookupStr(const OPER& key, const OPER& range)
+{
+	OPER val = lookup(key, range);
+
+	return isStr(val) ? val.to_string() : "";
+}
+static inline double lookupNum(const OPER& key, const OPER& range)
+{
+	OPER val = lookup(key, range);
+
+	return isNum(val) ? Num(val) : 0;
+}
+static inline int lookupInt(const OPER& key, const OPER& range)
+{
+	double val = asNum(lookup(key, range));
+
+	return !std::isnan(val) ? static_cast<int>(val) : 0;
+}
+static inline bool lookupBool(const OPER& key, const OPER& range)
+{
+	double val = asNum(lookup(key, range));
+
+	return !std::isnan(val) ? val != 0 : false;
+}
+static inline Decimal lookupDecimal(const OPER& key, const OPER& range)
+{
+	return DecimalFunctions::doubleToDecimal(asNum(lookup(key, range)));
+}
+
 inline Contract eContract(const OPER& o)
 {
 	Contract c;
 
 	for (const OPER& key : oContractHeader) {
-		if (key == (L"conId")) {
-			c.conId = Int(lookup(key, o));
+		if (key == L"conId") {
+			c.conId = lookupInt(key, o);
 		}
-		else if (key == (L"symbol")) {
-			c.symbol = lookup(key, o).to_string();
+		else if (key == L"symbol") {
+			c.symbol = lookupStr(key, o);
 		}
-		else if (key == (L"secType")) {
-			c.secType = lookup(key, o).to_string();
+		else if (key == L"secType") {
+			c.secType = lookupStr(key, o);
 		}
-		else if (key == (L"lastTradeDateOrContractMonth")) {
-			c.lastTradeDateOrContractMonth = lookup(key, o).to_string();
+		else if (key == L"lastTradeDateOrContractMonth") {
+			c.lastTradeDateOrContractMonth = lookupStr(key, o);
 		}
-		else if (key == (L"lastTradeDate")) {
-			c.lastTradeDate = lookup(key, o).to_string();
+		else if (key == L"lastTradeDate") {
+			c.lastTradeDate = lookupStr(key, o);
 		}
-		else if (key == (L"strike")) {
-			c.strike = Num(lookup(key, o));
+		else if (key == L"strike") {
+			c.strike = lookupNum(key, o);
 		}
-		else if (key == (L"right")) {
-			c.right = lookup(key, o).to_string();
+		else if (key == L"right") {
+			c.right = lookupStr(key, o);
 		}
-		else if (key == (L"multiplier")) {
-			c.multiplier = lookup(key, o).to_string();
+		else if (key == L"multiplier") {
+			c.multiplier = lookupStr(key, o);
 		}
-		else if (key == (L"exchange")) {
-			c.exchange = lookup(key, o).to_string();
+		else if (key == L"exchange") {
+			c.exchange = lookupStr(key, o);
 		}
-		else if (key == (L"primaryExchange")) {
-			c.primaryExchange = lookup(key, o).to_string();
+		else if (key == L"primaryExchange") {
+			c.primaryExchange = lookupStr(key, o);
 		}
-		else if (key == (L"currency")) {
-			c.currency = lookup(key, o).to_string();
+		else if (key == L"currency") {
+			c.currency = lookupStr(key, o);
 		}
-		else if (key == (L"localSymbol")) {
-			c.localSymbol = lookup(key, o).to_string();
+		else if (key == L"localSymbol") {
+			c.localSymbol = lookupStr(key, o);
 		}
-		else if (key == (L"tradingClass")) {
-			c.tradingClass = lookup(key, o).to_string();
+		else if (key == L"tradingClass") {
+			c.tradingClass = lookupStr(key, o);
 		}
-		else if (key == (L"includeExpired")) {
-			c.includeExpired = static_cast<bool>(lookup(key, o));
+		else if (key == L"includeExpired") {
+			c.includeExpired = lookupBool(key, o);
 		}
-		else if (key == (L"secIdType")) {
-			c.secIdType = lookup(key, o).to_string();
+		else if (key == L"secIdType") {
+			c.secIdType = lookupStr(key, o);
 		}
-		else if (key == (L"secId")) {
-			c.secId = lookup(key, o).to_string();
+		else if (key == L"secId") {
+			c.secId = lookupStr(key, o);
 		}
-		else if (key == (L"description")) {
-			c.description = lookup(key, o).to_string();
+		else if (key == L"description") {
+			c.description = lookupStr(key, o);
 		}
-		else if (key == (L"issuerId")) {
-			c.issuerId = lookup(key, o).to_string();
+		else if (key == L"issuerId") {
+			c.issuerId = lookupStr(key, o);
 		}
-		else if (key == (L"comboLegsDescrip")) {
-			c.comboLegsDescrip = lookup(key, o).to_string();
+		else if (key == L"comboLegsDescrip") {
+			c.comboLegsDescrip = lookupStr(key, o);
 		}
 	}
 
@@ -217,83 +246,83 @@ inline ContractDetails eContractDetails(const OPER& o)
 	ContractDetails cd;
 
 	for (const OPER& key : oContractDetailsHeader) {
-		if (key == (L"marketName")) {
-			cd.marketName = lookup(key, o).to_string();
+		if (key == L"marketName") {
+			cd.marketName = lookupStr(key, o);
 		}
-		else if (key == (L"minTick")) {
-			cd.minTick = Num(lookup(key, o));
+		else if (key == L"minTick") {
+			cd.minTick = lookupNum(key, o);
 		}
-		else if (key == (L"orderTypes")) {
-			cd.orderTypes = lookup(key, o).to_string();
+		else if (key == L"orderTypes") {
+			cd.orderTypes = lookupStr(key, o);
 		}
-		else if (key == (L"validExchanges")) {
-			cd.validExchanges = lookup(key, o).to_string();
+		else if (key == L"validExchanges") {
+			cd.validExchanges = lookupStr(key, o);
 		}
-		else if (key == (L"priceMagnifier")) {
-			cd.priceMagnifier = Int(lookup(key, o));
+		else if (key == L"priceMagnifier") {
+			cd.priceMagnifier = lookupInt(key, o);
 		}
-		else if (key == (L"underConId")) {
-			cd.underConId = Int(lookup(key, o));
+		else if (key == L"underConId") {
+			cd.underConId = lookupInt(key, o);
 		}
-		else if (key == (L"longName")) {
-			cd.longName = lookup(key, o).to_string();
+		else if (key == L"longName") {
+			cd.longName = lookupStr(key, o);
 		}
-		else if (key == (L"contractMonth")) {
-			cd.contractMonth = lookup(key, o).to_string();
+		else if (key == L"contractMonth") {
+			cd.contractMonth = lookupStr(key, o);
 		}
-		else if (key == (L"industry")) {
-			cd.industry = lookup(key, o).to_string();
+		else if (key == L"industry") {
+			cd.industry = lookupStr(key, o);
 		}
-		else if (key == (L"category")) {
-			cd.category = lookup(key, o).to_string();
+		else if (key == L"category") {
+			cd.category = lookupStr(key, o);
 		}
-		else if (key == (L"subcategory")) {
-			cd.subcategory = lookup(key, o).to_string();
+		else if (key == L"subcategory") {
+			cd.subcategory = lookupStr(key, o);
 		}
-		else if (key == (L"timeZoneId")) {
-			cd.timeZoneId = lookup(key, o).to_string();
+		else if (key == L"timeZoneId") {
+			cd.timeZoneId = lookupStr(key, o);
 		}
-		else if (key == (L"tradingHours")) {
-			cd.tradingHours = lookup(key, o).to_string();
+		else if (key == L"tradingHours") {
+			cd.tradingHours = lookupStr(key, o);
 		}
-		else if (key == (L"liquidHours")) {
-			cd.liquidHours = lookup(key, o).to_string();
+		else if (key == L"liquidHours") {
+			cd.liquidHours = lookupStr(key, o);
 		}
-		else if (key == (L"evRule")) {
-			cd.evRule = lookup(key, o).to_string();
+		else if (key == L"evRule") {
+			cd.evRule = lookupStr(key, o);
 		}
-		else if (key == (L"evMultiplier")) {
-			cd.evMultiplier = Num(lookup(key, o));
+		else if (key == L"evMultiplier") {
+			cd.evMultiplier = lookupNum(key, o);
 		}
-		else if (key == (L"aggGroup")) {
-			cd.aggGroup = Int(lookup(key, o));
+		else if (key == L"aggGroup") {
+			cd.aggGroup = lookupInt(key, o);
 		}
-		else if (key == (L"underSymbol")) {
-			cd.underSymbol = lookup(key, o).to_string();
+		else if (key == L"underSymbol") {
+			cd.underSymbol = lookupStr(key, o);
 		}
-		else if (key == (L"underSecType")) {
-			cd.underSecType = lookup(key, o).to_string();
+		else if (key == L"underSecType") {
+			cd.underSecType = lookupStr(key, o);
 		}
-		else if (key == (L"marketRuleIds")) {
-			cd.marketRuleIds = lookup(key, o).to_string();
+		else if (key == L"marketRuleIds") {
+			cd.marketRuleIds = lookupStr(key, o);
 		}
-		else if (key == (L"realExpirationDate")) {
-			cd.realExpirationDate = lookup(key, o).to_string();
+		else if (key == L"realExpirationDate") {
+			cd.realExpirationDate = lookupStr(key, o);
 		}
-		else if (key == (L"lastTradeTime")) {
-			cd.lastTradeTime = lookup(key, o).to_string();
+		else if (key == L"lastTradeTime") {
+			cd.lastTradeTime = lookupStr(key, o);
 		}
-		else if (key == (L"stockType")) {
-			cd.stockType = lookup(key, o).to_string();
+		else if (key == L"stockType") {
+			cd.stockType = lookupStr(key, o);
 		}
-		else if (key == (L"minSize")) {
-			cd.minSize = DecimalFunctions::doubleToDecimal(Num(lookup(key, o)));
+		else if (key == L"minSize") {
+			cd.minSize = lookupDecimal(key, o);
 		}
-		else if (key == (L"sizeIncrement")) {
-			cd.sizeIncrement = DecimalFunctions::doubleToDecimal(Num(lookup(key, o)));
+		else if (key == L"sizeIncrement") {
+			cd.sizeIncrement = lookupDecimal(key, o);
 		}
-		else if (key == (L"suggestedSizeIncrement")) {
-			cd.suggestedSizeIncrement = DecimalFunctions::doubleToDecimal(Num(lookup(key, o)));
+		else if (key == L"suggestedSizeIncrement") {
+			cd.suggestedSizeIncrement = lookupDecimal(key, o);
 		}
 	}
 
@@ -513,11 +542,22 @@ LPOPER WINAPI xll_req_contract_details(HANDLEX h, const LPOPER po)
 #pragma XLLEXPORT
 	static OPER o;
 	try {
+		o = ErrNA;
 		handle<Wrapper> h_(h);
 		ensure(h_);
 		const auto pcdw = h_.as<ContractDetailsWrapper>();
 		ensure(pcdw);
-		Contract c = eContract(*po);
+
+		if (isNum(*po)) {
+			handle<Contract> c_(Num(*po));
+			ensure(c_);	
+			pcdw->req(*c_);
+		}
+		else {
+			Contract c = eContract(*po);
+			pcdw->req(c);
+		}
+		o = oContractDetailsHeader;
 		/*
 		pcdw->req(c);
 		o = oContractHeader;
