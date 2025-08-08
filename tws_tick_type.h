@@ -4,6 +4,7 @@ Use EDecoder::DecodeField???
 */
 #pragma once
 #include <map>
+#include <string>
 #include "tws_api/EWrapper.h"
 
 // https://interactivebrokers.github.io/tws-api/tick_types.html

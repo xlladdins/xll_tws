@@ -360,22 +360,25 @@ AddIn xai_contract(
 		Arg(XLL_HANDLEX, L"handle", L"is a handle to a Contract.")
 		})
 	.Category(CATEGORY)
-	.FunctionHelp(L"Return key-value pairs for a given contract handle.")
+	.FunctionHelp(L"Return key-value pairs for a given contract handle or contract fields if handle is 0.")
 );
 LPOPER WINAPI xll_contract(HANDLEX h)
 {
 #pragma XLLEXPORT
 	static OPER o;
+
 	try {
-		o = ErrNA;
-		handle<Contract> h_(h);
-		ensure(h_);
 		o = oContractHeader;
-		o.vstack(oContract(*h_));
+		if (h != 0) {
+			handle<Contract> h_(h);
+			ensure(h_);
+			o.vstack(oContract(*h_));
+		}
 	}
 	catch (const std::exception& ex) {
 		XLL_ERROR(ex.what());
 	}
+
 	return &o;
 }
 
@@ -498,7 +501,7 @@ LPOPER WINAPI xll_req_matching_symbols(HANDLEX h, const char* pattern)
 		for (const ContractDescription& cd : pssw->symbolResults) {
 			o.vstack(oContract(cd.contract));
 		}
-		pssw->reset();
+		std::this_thread::sleep_for(std::chrono::seconds(1)); // TWS throttling
 	}
 	catch (const std::exception& ex) {
 		XLL_ERROR(ex.what());
@@ -572,24 +575,6 @@ LPOPER WINAPI xll_req_contract_details(HANDLEX h, const LPOPER po)
 	}
 	return &o;
 }
-#if 0
-AddIn xai_Wrapper(
-	Function(XLL_HANDLEX, L"xll_Wrapper", L"\\" CATEGORY L".Wrapper")
-	.Arguments({
-		Arg(XLL_CSTRING4, L"host", L"Host name or IP address of the TWS or IB Gateway."),
-		Arg(XLL_INT, L"port", L"Port number of the TWS or IB Gateway."),
-		Arg(XLL_INT, L"clientId", L"Client ID for the connection."),
-		Arg(XLL_INT, L"timeout", L"Timeout in milliseconds for the connection.")
-		})
-	.Uncalced()
-	.Category(CATEGORY)
-	.FunctionHelp(L"Create a TWS API wrapper instance.")
-);
-HANDLEX WINAPI xll_Wrapper(const char* host, int port, int clientId, int timeout)
-{
-#pragma XLLEXPORT
-	return to_handle(&wrapper);
-}
 
 AddIn xai_HistoricalData(
 	Function(XLL_HANDLEX, L"xll_HistoricalData", L"\\" CATEGORY L".HistoricalData")
@@ -613,6 +598,7 @@ HANDLEX WINAPI xll_HistoricalData()
 
 	return h;
 }
+
 
 XLL_CONST(INT, MarketDataType_REALTIME, MarketDataType::REALTIME, "Real-time market data type.", CATEGORY, "https://interactivebrokers.github.io/tws-api/market_data_type.html");
 XLL_CONST(INT, MarketDataType_FROZEN, MarketDataType::FROZEN, "Real-time market data type.", CATEGORY, "https://interactivebrokers.github.io/tws-api/market_data_type.html");
@@ -648,64 +634,3 @@ HANDLEX WINAPI xll_MktData(MarketDataType type)
 
 	return h;
 }
-
-// Process messages.
-void WINAPI reqMktData(OPER&& asyncHandle, MktDataWrapper* wrapper)
-{
-	try {
-		EReader reader(&wrapper->client, &wrapper->signal);
-		reader.start();
-		wrapper->signal.waitForSignal();
-		reader.processMsgs();
-		std::this_thread::sleep_for(std::chrono::seconds(1));;
-		for (const auto& [id, kv] : wrapper->tickData) {
-			OPER o(2, kv.size());
-			int i = 0;
-			for (const auto& [tick, value] : kv) {
-				// Use std::visit to handle different types of values
-				o(0, i) = tickName[tick];
-				o(1, i) = std::visit(visitor, value);
-			}
-			o.reshape(size(o) / 2, 2);
-			Excel12(xlAsyncReturn, 0, 2, &asyncHandle, &o);
-		}
-	}
-	catch (const std::exception& ex) {
-		XLL_ERROR(ex.what());
-		Excel12(xlAsyncReturn, 0, 2, &asyncHandle, &ErrNA);
-	}
-	catch (...) {
-		XLL_ERROR("reqMktData: unknown exception");
-		Excel12(xlAsyncReturn, 0, 2, &asyncHandle, &ErrNA);
-	}
-}
-
-// should be async
-AddIn xai_reqMktData(
-	Function(XLL_VOID, L"xll_reqMktData", CATEGORY L".reqMktData")
-	.Arguments({
-		Arg(XLL_HANDLEX, L"hWrapper", L"Handle to the market data wrapper."),
-		Arg(XLL_CSTRING4, L"symbol", L"Symbol of the stock or option."),
-		})
-		.Asynchronous()
-	.Category(CATEGORY)
-	.FunctionHelp(L"Request market data for a given symbol.")
-);
-void WINAPI xll_reqMktData(HANDLEX hWrapper, const char* symbol, LPOPER asyncHandle)
-{
-#pragma XLLEXPORT
-	try {
-		handle<Wrapper> h(hWrapper);
-		ensure(h);
-		auto wrapper = h.as<MktDataWrapper>();
-		ensure(wrapper);
-		ensure(wrapper->client.isConnected());
-		Stock stock(symbol);
-		wrapper->client.reqMktData(wrapper->orderId, stock, "0,1,2,3,4,5,6,7", false, false, TagValueListSPtr());
-		std::thread(reqMktData, *asyncHandle, wrapper).detach();
-	}
-	catch (const std::exception& ex) {
-		XLL_ERROR(ex.what());
-	}
-}
-#endif // 0

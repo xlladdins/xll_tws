@@ -143,10 +143,9 @@ namespace tws {
 		int port, clientId;
 		EReaderOSSignal signal;
 		EClientSocket client;
-		EReader reader;
 		// Connect to client socket if necessary.
 		Wrapper(const char* _host = "127.0.0.1", int _port = 7497, int _clientId = 0, int timeout = 1000/*ms*/)
-			: DefaultEWrapper(), host(_host), port(_port), clientId(_clientId), signal(timeout), client(this, &signal), reader(&client, &signal)
+			: DefaultEWrapper(), host(_host), port(_port), clientId(_clientId), signal(timeout), client(this, &signal)
 		{
 			client.setConnectOptions("+PACEAPI");
 			client.eConnect(host.c_str(), port, clientId);
@@ -212,14 +211,14 @@ namespace tws {
 			//symbolCv.wait(lock, [this] { return symbolReady; });
 			reset();
 			connect();
-			//EReader reader(&client, &signal);
+			EReader reader(&client, &signal);
 			reader.start();
 			client.reqMatchingSymbols(Id(), pattern);
 			while (!done) {
 				signal.waitForSignal();
 				reader.processMsgs();
 			}
-			reader.stop();
+			//reader.stop();
 			/*
 			{
 				std::lock_guard<std::mutex> lock(symbolMutex);
@@ -263,11 +262,21 @@ namespace tws {
 		}
 	};
 
+	// https://interactivebrokers.github.io/tws-api/historical_data.html
 	class HistoricalDataWrapper : public Wrapper {
 	public:
 		std::string headTimeStamp;
+		std::vector<Bar> bars;
+		bool done = false;
 		HistoricalDataWrapper() = default;
 		~HistoricalDataWrapper() = default;
+
+		void reset()
+		{
+			headTimeStamp.clear();
+			bars.clear();
+			done = false;
+		}
 
 		// Override EWrapper methods as needed
 		void headTimestamp(int reqId, const std::string& headTimestamp) 
@@ -276,11 +285,25 @@ namespace tws {
 		}
 		void historicalData(TickerId reqId, const Bar& bar) override
 		{
-			// Handle historical data here
+			bars.push_back(bar);
 		}
 		void historicalDataEnd(int reqId, const std::string& startDateStr, const std::string& endDateStr) override
 		{
-			//std::cout << "Historical data end." << std::endl;
+			done = true;
+		}
+
+		void req(const Contract& contract, const std::string& endDateTime, const std::string& durationStr,
+			const std::string& barSizeSetting, const std::string& whatToShow, int useRTH = 1, int formatDate = 1, bool keepUpToDate = false, const TagValueListSPtr& chartOptions = TagValueListSPtr())
+		{
+			reset();
+			connect();
+			EReader reader(&client, &signal);
+			reader.start();
+			client.reqHistoricalData(Id(), contract, endDateTime, durationStr, barSizeSetting, whatToShow, useRTH, formatDate, keepUpToDate, chartOptions);
+			while (!done) {
+				signal.waitForSignal();
+				reader.processMsgs();
+			}
 		}
 	};
 
