@@ -111,6 +111,23 @@ X(FINAL_IPO_LAST, 102, "Final price for IPO", "https://interactivebrokers.github
 
 namespace tws {
 
+    enum TickAttribEnum
+    {
+        canAutoExecute = 1,
+        pastLimit = 2,
+        reOpen = 4
+    };
+    constexpr int TickAttribBits(const TickAttrib& attrib)
+    {
+        return attrib.canAutoExecute * canAutoExecute
+            + attrib.pastLimit * pastLimit
+            + attrib.preOpen * reOpen;
+    }
+#ifdef _DEBUG
+    static_assert(TickAttribBits(TickAttrib{}) == 0);
+    static_assert(TickAttribBits(TickAttrib{ false, true, true }) == 6);
+#endif // _DEBUG
+
 	// String name to value map for TWS tick types.
 #define TWS_TICK_TYPE_MAP(name, value, help, url) { #name, value },
 	inline std::map<std::string, int> tickType = {

@@ -1,5 +1,5 @@
 // xll_tick_type.cpp - Tick Type enumeration
-#include "tws_tick_type.h"
+#include "tws_tick.h"
 #include "xll24/include/xll.h"
 
 #ifndef CATEGORY

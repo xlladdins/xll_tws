@@ -8,7 +8,7 @@
 #include "tws_api/EClientSocket.h"
 #include "tws_api/EReaderOSSignal.h"
 #include "tws_api/EReader.h"
-
+#include "tws_error.h"
 
 // TwsSocketClientErrors.h
 #define TWS_CODE_MSG_PAIR(X) \
@@ -44,91 +44,6 @@
 	X(585, "FA Profile is not supported anymore, use FA Group instead - "), \
 
 namespace tws {
-
-	enum TickAttribEnum
-	{
-		canAutoExecute = 1,
-		pastLimit = 2,
-		reOpen = 4
-	};
-	constexpr int TickAttribBits(const TickAttrib& attrib)
-	{
-		return attrib.canAutoExecute * canAutoExecute
-			+ attrib.pastLimit * pastLimit
-			+ attrib.preOpen * reOpen;
-	}
-#ifdef _DEBUG
-	static_assert(TickAttribBits(TickAttrib{}) == 0);
-	static_assert(TickAttribBits(TickAttrib{ false, true, true }) == 6);
-#endif // _DEBUG
-
-	// Convert time_t to a localtime string using format.
-	inline std::string formatTime(time_t t, const char* format) 
-	{
-		if (t % 1000 == 0) {
-			t /= 1000; // Convert milliseconds to seconds
-		}
-		struct tm timeinfo;
-		char buffer[20] = { 0 };
-		errno_t err = localtime_s(&timeinfo, &t);
-		if (err == 0) {
-			strftime(buffer, sizeof(buffer), format, &timeinfo);
-		}
-		else {
-			err = strerror_s(buffer, sizeof(buffer), err);
-		}
-
-		return std::string(buffer);
-	}
-	inline const char* const YMDHMS = "%Y%m%d %H:%M:%S";
-	inline const char* const YMD = "%Y%m%d";
-	inline std::string DateTime(time_t t) { return formatTime(t, YMDHMS); }
-	inline std::string Date(time_t t) { return formatTime(t, YMD); }
-
-	enum class ErrorType {
-		Error,
-		Warning,
-		Information,
-		Unknown
-	};
-	constexpr ErrorType errorType(int errorCode)
-	{
-		// Error codes (partial list, expand as needed)
-		if (100 <= errorCode && errorCode <= 1000)
-			return ErrorType::Error;
-		// Warnings
-		if (errorCode == 2104 || errorCode == 2106 || errorCode == 2107 || errorCode == 2108)
-			return ErrorType::Warning;
-		// Informational
-		if (errorCode == 2103 || errorCode == 2105 || errorCode == 2158)
-			return ErrorType::Information;
-		// Add more codes as needed
-
-		return ErrorType::Unknown;
-	}
-
-	struct Error : public std::exception {
-		int id;
-		time_t errorTime;
-		int errorCode;
-		std::string errorString;
-		std::string advancedOrderRejectJson;
-		std::string what_;
-		Error(int id, time_t errorTime, int errorCode, const std::string& errorString, const std::string& advancedOrderRejectJson)
-			: id(id), errorTime(errorTime), errorCode(errorCode), errorString(errorString), advancedOrderRejectJson(advancedOrderRejectJson) 
-		{
-			what_ = std::format("id: {} time: {} error: {}", errorCode, DateTime(errorTime), errorString);
-		}
-
-		const char* what() const override
-		{
-			return what_.c_str();
-		}
-	};
-
-
-	// Value type to hold TWS callback data.
-	using Value = std::variant<bool, int, long, long long, const char*, double, Decimal, std::string>;
 
 	inline long Id()
 	{
@@ -173,7 +88,7 @@ namespace tws {
 
 		void error(int id, time_t errorTime, int errorCode, const std::string& errorString, const std::string& advancedOrderRejectJson) override
 		{
-			if (errorType(errorCode) == ErrorType::Error) {
+			if (errorType(errorCode) == ErrorType::ERROR) {
 				throw tws::Error(id, errorTime, errorCode, errorString, advancedOrderRejectJson);
 			}
 		}
@@ -293,7 +208,7 @@ namespace tws {
 		}
 
 		void req(const Contract& contract, const std::string& endDateTime, const std::string& durationStr,
-			const std::string& barSizeSetting, const std::string& whatToShow, int useRTH = 1, int formatDate = 1, bool keepUpToDate = false, const TagValueListSPtr& chartOptions = TagValueListSPtr())
+			const std::string& barSizeSetting, const std::string& whatToShow = "TRADES", int useRTH = 1, int formatDate = 1, bool keepUpToDate = false, const TagValueListSPtr& chartOptions = TagValueListSPtr())
 		{
 			reset();
 			connect();

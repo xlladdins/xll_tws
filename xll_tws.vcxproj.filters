@@ -18,7 +18,16 @@
     <ClInclude Include="tws.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="tws_tick_type.h">
+    <ClInclude Include="tws_tick.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="xll_tws.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tws_error.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tws_datetime.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -26,7 +35,10 @@
     <ClCompile Include="xll_tws.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="xll_tick_type.cpp">
+    <ClCompile Include="xll_tick.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="xll_contract.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

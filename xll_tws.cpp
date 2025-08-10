@@ -1,36 +1,27 @@
-#include <thread>
+﻿#include <thread>
 #include "tws.h"
-#include "tws_tick_type.h"
-#include "xll24/include/xll.h"
+#include "xll_tws.h"
 
-#ifndef CATEGORY
-#define CATEGORY L"TWS"
-#endif
+// https://interactivebrokers.github.io/tws-api/historical_bars.html#hd_what_to_show
+#define HISTORICAL_DATA_TYPES(X) \
+X(TRADES, "Data is adjusted for splits, but not dividends."), \
+X(MIDPOINT, ""), \
+X(BID, ""), \
+X(ASK, ""), \
+X(BID_ASK, ""), \
+X(ADJUSTED_LAST, "Data is adjusted for splits and dividends. "), \
+X(HISTORICAL_VOLATILITY, ""), \
+X(OPTION_IMPLIED_VOLATILITY, ""), \
+X(FEE_RATE, ""), \
+X(YIELD_BID, ""), \
+X(YIELD_ASK, ""), \
+X(YIELD_BID_ASK, ""), \
+X(YIELD_LAST, ""), \
+X(AGGTRADES, "Data should only be used with Crypto contracts."), \
+
 
 using namespace tws;
 using namespace xll;
-
-// Convert long long to double. Faithful if LL < 2^53 = 10^16
-constexpr double lltod(long long ll)
-{
-	return static_cast<double>(ll);
-}
-
-// Use std::visit(value, visitor) to handle different types of values in the tick data.
-template<class... Ts>
-struct overloads : Ts... { using Ts::operator()...; };
-// Convert TWS value to OPER type.
-const auto visitor = overloads
-{
-	[](bool b) { return OPER(b); },
-	[](int i) { return OPER(i); },
-	[](long l) { return OPER(static_cast<int>(l)); },
-	[](long long ll) { return OPER(lltod(ll)); },
-	[](double d) { return OPER(d); },
-	[](Decimal d) { return OPER(DecimalFunctions::decimalToDouble(d)); },
-	[](const char* s) { return OPER(s); },
-	[](const std::string& s) { return OPER(s); }
-};
 
 // https://interactivebrokers.github.io/tws-api/basic_contracts.html
 const OPER oContractHeader({
@@ -56,7 +47,7 @@ const OPER oContractHeader({
 inline OPER oContract(const Contract& c)
 {
 	return OPER({
-		OPER(lltod(c.conId)),
+		OPER(static_cast<double>(c.conId)),
 		OPER(c.symbol),
 		OPER(c.secType),
 		OPER(c.lastTradeDateOrContractMonth),
@@ -217,7 +208,7 @@ inline OPER oContractDetails(const ContractDetails& cd)
 		OPER(cd.minTick),
 		OPER(cd.orderTypes),
 		OPER(cd.validExchanges),
-		OPER(lltod(cd.priceMagnifier)),
+		OPER(static_cast<double>(cd.priceMagnifier)),
 		OPER(cd.underConId),
 		OPER(cd.longName),
 		OPER(cd.contractMonth),

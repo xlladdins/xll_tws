@@ -140,13 +140,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="tws_tick_type.h" />
+    <ClInclude Include="tws_datetime.h" />
+    <ClInclude Include="tws_error.h" />
+    <ClInclude Include="tws_tick.h" />
     <ClInclude Include="tws.h" />
+    <ClInclude Include="xll_tws.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="xll_tick_type.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    <ClCompile Include="xll_contract.cpp" />
+    <ClCompile Include="xll_tick.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="xll_tws.cpp" />
   </ItemGroup>
