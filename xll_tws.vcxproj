@@ -140,10 +140,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="tws_contract.h" />
+    <ClInclude Include="tws_contract_details.h" />
     <ClInclude Include="tws_datetime.h" />
     <ClInclude Include="tws_error.h" />
+    <ClInclude Include="tws_historical_data.h" />
+    <ClInclude Include="tws_matching_symbols.h" />
+    <ClInclude Include="tws_mkt_data.h" />
     <ClInclude Include="tws_tick.h" />
     <ClInclude Include="tws.h" />
+    <ClInclude Include="tws_wrapper.h" />
     <ClInclude Include="xll_tws.h" />
   </ItemGroup>
   <ItemGroup>

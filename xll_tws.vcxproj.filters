@@ -30,6 +30,24 @@
     <ClInclude Include="tws_datetime.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="tws_wrapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tws_matching_symbols.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tws_contract_details.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tws_historical_data.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tws_mkt_data.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tws_contract.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="xll_tws.cpp">

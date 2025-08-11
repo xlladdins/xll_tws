@@ -1,6 +1,10 @@
-﻿#include <thread>
-#include "tws.h"
+﻿#include "tws_wrapper.h"
 #include "xll_tws.h"
+
+using namespace xll;
+using namespace tws;
+
+#if 0
 
 // https://interactivebrokers.github.io/tws-api/historical_bars.html#hd_what_to_show
 #define HISTORICAL_DATA_TYPES(X) \
@@ -22,155 +26,6 @@ X(AGGTRADES, "Data should only be used with Crypto contracts."), \
 
 using namespace tws;
 using namespace xll;
-
-// https://interactivebrokers.github.io/tws-api/basic_contracts.html
-const OPER oContractHeader({
-	OPER(L"conId"), OPER(L"symbol"),
-	OPER(L"secType"),
-	OPER(L"lastTradeDateOrContractMonth"),
-	OPER(L"lastTradeDate"),
-	OPER(L"strike"),
-	OPER(L"right"),
-	OPER(L"multiplier"),
-	OPER(L"exchange"),
-	OPER(L"primaryExchange"),
-	OPER(L"currency"),
-	OPER(L"localSymbol"),
-	OPER(L"tradingClass"),
-	OPER(L"includeExpired"),
-	OPER(L"secIdType"),
-	OPER(L"secId"),
-	OPER(L"description"),
-	OPER(L"issuerId"),
-	OPER(L"comboLegsDescrip")
-});
-inline OPER oContract(const Contract& c)
-{
-	return OPER({
-		OPER(static_cast<double>(c.conId)),
-		OPER(c.symbol),
-		OPER(c.secType),
-		OPER(c.lastTradeDateOrContractMonth),
-		OPER(c.lastTradeDate),
-		OPER(c.strike),
-		OPER(c.right),
-		OPER(c.multiplier),
-		OPER(c.exchange),
-		OPER(c.primaryExchange),
-		OPER(c.currency),
-		OPER(c.localSymbol),
-		OPER(c.tradingClass),
-		OPER(c.includeExpired),
-		OPER(c.secIdType),
-		OPER(c.secId),
-		OPER(c.description),
-		OPER(c.issuerId),
-		OPER(c.comboLegsDescrip),
-	});
-}
-// Vlookup 2 column range of key, value
-static inline OPER lookup(const OPER& key, const OPER& range)
-{
-	ensure(rows(range) == 2 || columns(range) == 2);
-
-	return Excel(rows(range) == 2 ? xlfHlookup : xlfVlookup, key, range, 2, false); // exact
-}
-static inline std::string lookupStr(const OPER& key, const OPER& range)
-{
-	OPER val = lookup(key, range);
-
-	return isStr(val) ? val.to_string() : "";
-}
-static inline double lookupNum(const OPER& key, const OPER& range)
-{
-	OPER val = lookup(key, range);
-
-	return isNum(val) ? Num(val) : 0;
-}
-static inline int lookupInt(const OPER& key, const OPER& range)
-{
-	double val = asNum(lookup(key, range));
-
-	return !std::isnan(val) ? static_cast<int>(val) : 0;
-}
-static inline bool lookupBool(const OPER& key, const OPER& range)
-{
-	double val = asNum(lookup(key, range));
-
-	return !std::isnan(val) ? val != 0 : false;
-}
-static inline Decimal lookupDecimal(const OPER& key, const OPER& range)
-{
-	return DecimalFunctions::doubleToDecimal(asNum(lookup(key, range)));
-}
-
-inline Contract eContract(const OPER& o)
-{
-	Contract c;
-
-	for (const OPER& key : oContractHeader) {
-		if (key == L"conId") {
-			c.conId = lookupInt(key, o);
-		}
-		else if (key == L"symbol") {
-			c.symbol = lookupStr(key, o);
-		}
-		else if (key == L"secType") {
-			c.secType = lookupStr(key, o);
-		}
-		else if (key == L"lastTradeDateOrContractMonth") {
-			c.lastTradeDateOrContractMonth = lookupStr(key, o);
-		}
-		else if (key == L"lastTradeDate") {
-			c.lastTradeDate = lookupStr(key, o);
-		}
-		else if (key == L"strike") {
-			c.strike = lookupNum(key, o);
-		}
-		else if (key == L"right") {
-			c.right = lookupStr(key, o);
-		}
-		else if (key == L"multiplier") {
-			c.multiplier = lookupStr(key, o);
-		}
-		else if (key == L"exchange") {
-			c.exchange = lookupStr(key, o);
-		}
-		else if (key == L"primaryExchange") {
-			c.primaryExchange = lookupStr(key, o);
-		}
-		else if (key == L"currency") {
-			c.currency = lookupStr(key, o);
-		}
-		else if (key == L"localSymbol") {
-			c.localSymbol = lookupStr(key, o);
-		}
-		else if (key == L"tradingClass") {
-			c.tradingClass = lookupStr(key, o);
-		}
-		else if (key == L"includeExpired") {
-			c.includeExpired = lookupBool(key, o);
-		}
-		else if (key == L"secIdType") {
-			c.secIdType = lookupStr(key, o);
-		}
-		else if (key == L"secId") {
-			c.secId = lookupStr(key, o);
-		}
-		else if (key == L"description") {
-			c.description = lookupStr(key, o);
-		}
-		else if (key == L"issuerId") {
-			c.issuerId = lookupStr(key, o);
-		}
-		else if (key == L"comboLegsDescrip") {
-			c.comboLegsDescrip = lookupStr(key, o);
-		}
-	}
-
-	return c;
-}
-
 const OPER oContractDetailsHeader({
 	// Contract
 	OPER(L"marketName"),
@@ -320,58 +175,6 @@ inline ContractDetails eContractDetails(const OPER& o)
 	return cd;
 }
 
-AddIn xai_contract_(
-	Function(XLL_HANDLEX, L"xll_contract_", L"\\" CATEGORY L".Contract")
-	.Arguments({
-		Arg(XLL_LPOPER, L"contract", L"key-value pairs for a contract.")
-		})
-	.Uncalced()
-	.Category(CATEGORY)
-	.FunctionHelp(L"Return a contract handle from a key-value pair range.")
-);
-HANDLEX WINAPI xll_contract_(const LPOPER po)
-{
-#pragma XLLEXPORT
-	HANDLEX h = INVALID_HANDLEX;
-	try {
-		Contract c = eContract(*po);
-		handle<Contract> h_(new Contract(c));
-		ensure(h_);
-		h = h_.get();
-	}
-	catch (const std::exception& ex) {
-		XLL_ERROR(ex.what());
-	}
-	return h;
-}
-
-AddIn xai_contract(
-	Function(XLL_LPOPER, L"xll_contract", CATEGORY L".Contract")
-	.Arguments({
-		Arg(XLL_HANDLEX, L"handle", L"is a handle to a Contract.")
-		})
-	.Category(CATEGORY)
-	.FunctionHelp(L"Return key-value pairs for a given contract handle or contract fields if handle is 0.")
-);
-LPOPER WINAPI xll_contract(HANDLEX h)
-{
-#pragma XLLEXPORT
-	static OPER o;
-
-	try {
-		o = oContractHeader;
-		if (h != 0) {
-			handle<Contract> h_(h);
-			ensure(h_);
-			o.vstack(oContract(*h_));
-		}
-	}
-	catch (const std::exception& ex) {
-		XLL_ERROR(ex.what());
-	}
-
-	return &o;
-}
 
 AddIn xai_server_version(
 	Function(XLL_DOUBLE, L"xll_server_version", L"\\" CATEGORY L".ServerVersion")
@@ -397,7 +200,6 @@ double WINAPI xll_server_version(HANDLEX h)
 	}
 	return version;
 }
-
 AddIn xai_matching_symbols_wrapper(
 	Function(XLL_HANDLEX, L"xll_matching_symbols_wrapper", L"\\" CATEGORY L".MatchingSymbols")
 	.Uncalced()
@@ -625,3 +427,4 @@ HANDLEX WINAPI xll_MktData(MarketDataType type)
 
 	return h;
 }
+#endif // 0

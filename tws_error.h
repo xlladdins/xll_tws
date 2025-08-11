@@ -100,25 +100,14 @@ namespace tws {
 		UNKNOWN
     };
 
-#ifdef ERROR
-#define _ERROR ERROR
-#undef ERROR
-#endif
     enum class ErrorType {
-        ERROR,
-        WARNING,
-        INFORMATION,
-        UNKNOWN
+        _ERROR,
+        _WARNING,
+        _INFORMATION,
+        _UNKNOWN
     };
-#ifdef _ERROR
-#define ERROR _ERROR
-#endif
-    // Fix error: E0020: identifier "TWS_SYSTEM_ERRORS" is undefined
-    // Plan:
-    // 1. Define a macro TWS_ERROR_TYPE that expands all error code macros with the correct signature.
-    // 2. Use this macro in errorType() to check all error codes.
 
-    #define TWS_ERROR_TYPE(class, code, type, msg) if (errorCode == code) return ErrorType::type;
+#define TWS_ERROR_TYPE(class, code, type, msg) if (errorCode == code) return ErrorType::##_##type;
 
     constexpr ErrorType errorType(int errorCode)
     {
@@ -132,7 +121,7 @@ namespace tws {
         TWS_MISCELLANEOUS_ERRORS(TWS_ERROR_TYPE)
         TWS_FINANCIAL_ADVISOR_ERRORS(TWS_ERROR_TYPE)
 
-        return ErrorType::UNKNOWN;
+        return ErrorType::_UNKNOWN;
     }
 
     #undef TWS_ERROR_TYPE
