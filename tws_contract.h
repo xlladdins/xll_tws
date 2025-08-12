@@ -14,7 +14,7 @@
 	X(right, std::string, String) \
 	X(multiplier, std::string, String) \
 	X(exchange, std::string, String) \
-	X(primaryExchange , std::string, String) \
+	X(primaryExchange, std::string, String) \
 	X(currency, std::string, String) \
 	X(localSymbol, std::string, String) \
 	X(tradingClass, std::string, String) \
@@ -24,6 +24,35 @@
 	X(description, std::string , String) \
 	X(issuerId, std::string, String) \
 	X(comboLegsDescrip, std::string , String) \
+
+#define TWS_CONTRACT_DETAILS(X) \
+	X(std::string, marketName, String) \
+	X(double, minTick, Num) \
+	X(std::string, orderTypes, String) \
+	X(std::string, validExchanges, String) \
+	X(long, priceMagnifier, Long) \
+	X(int, underConId, Int) \
+	X(std::string, longName, String) \
+	X(std::string, contractMonth, String) \
+	X(std::string, industry, String) \
+	X(std::string, category, String) \
+	X(std::string, subcategory, String) \
+	X(std::string, timeZoneId, String) \
+	X(std::string, tradingHours, String) \
+	X(std::string, liquidHours, String) \
+	X(std::string, evRule, String) \
+	X(double, evMultiplier, Num) \
+	X(int, aggGroup, Int) \
+	X(std::string, underSymbol, String) \
+	X(std::string, underSecType, String) \
+	X(std::string, marketRuleIds, String) \
+	X(std::string, realExpirationDate, String) \
+	X(std::string, lastTradeTime, String) \
+	X(std::string, stockType, String) \
+	X(Decimal, minSize, DecimalNum) \
+	X(Decimal, sizeIncrement, DecimalNum) \
+	X(Decimal, suggestedSizeIncrement, DecimalNum) \
+
 
 namespace tws {
 
