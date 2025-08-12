@@ -1,4 +1,4 @@
-// TWS Contract 
+// xll_contract.cpp - TWS Contract 
 // https://interactivebrokers.github.io/tws-api/classIBApi_1_1Contract.html
 // https://ibkrcampus.com/campus/ibkr-api-page/twsapi-doc/#contracts
 #include "xll_tws.h"
@@ -40,7 +40,7 @@ inline Contract eContract(const OPER& o)
 AddIn xai_contract_(
 	Function(XLL_HANDLEX, L"xll_contract_", L"\\" CATEGORY L".Contract")
 	.Arguments({
-		Arg(XLL_LPOPER, L"contract", L"key-value pairs for a contract.")
+		Arg(XLL_LPOPER, L"contract", L"JSON contract.")
 		})
 	.Uncalced()
 	.Category(CATEGORY)
@@ -90,3 +90,57 @@ LPOPER WINAPI xll_contract(HANDLEX h)
 	return &o;
 }
 
+AddIn xai_matching_symbols_wrapper(
+	Function(XLL_HANDLEX, L"xll_matching_symbols_wrapper", L"\\" CATEGORY L".MatchingSymbols")
+	.Uncalced()
+	.Category(CATEGORY)
+	.FunctionHelp(L"Return handle to symbol sample wrapper.")
+);
+HANDLEX WINAPI xll_matching_symbols_wrapper()
+{
+#pragma XLLEXPORT
+	HANDLEX h = INVALID_HANDLEX;
+
+	try {
+		handle<Wrapper> h_(new MatchingSymbolsWrapper());
+		ensure(h_);
+		h = h_.get();
+	}
+	catch (const std::exception& ex) {
+		XLL_ERROR(ex.what());
+	}
+
+	return h;
+}
+AddIn xai_req_matching_symbols(
+	Function(XLL_LPOPER, L"xll_req_matching_symbols", CATEGORY L".MatchingSymbols")
+	.Arguments({
+		Arg(XLL_HANDLEX, L"handle", L"symbol sample handle."),
+		Arg(XLL_CSTRING4, L"pattern", L"either start of ticker symbol or (for larger strings) company name.")
+		})
+	.Category(CATEGORY)
+	.FunctionHelp(L"Request matching symbols for a given symbol.")
+);
+
+LPOPER WINAPI xll_req_matching_symbols(HANDLEX h, const char* pattern)
+{
+#pragma XLLEXPORT
+	static OPER o;
+
+	try {
+		handle<Wrapper> h_(h);
+		ensure(h_);
+		const auto pssw = h_.as<MatchingSymbolsWrapper>();
+		ensure(pssw);
+		pssw->req(pattern);
+		o = oContractHeader;
+		for (const ContractDescription& cd : pssw->symbolResults) {
+			o.vstack(oContract(cd.contract));
+		}
+	}
+	catch (const std::exception& ex) {
+		XLL_ERROR(ex.what());
+	}
+
+	return &o;
+}

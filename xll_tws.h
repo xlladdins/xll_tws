@@ -64,33 +64,6 @@ namespace xll {
 		[](const char* s) { return OPER(s); },
 		[](const std::string& s) { return OPER(s); }
 	};
-	/*
-	inline double lookupNum(const OPER& key, const OPER& range)
-	{
-		OPER val = value(range, key);
-		// ensure(isNum(val));
-
-		return isNum(val) ? Num(val) : 0;
-	}
-	inline std::string lookupStr(const OPER& key, const OPER& range)
-	{
-		OPER val = value(range, key);
-
-		return isStr(val) ? val.to_string() : "";
-	}
-	inline bool lookupBool(const OPER& key, const OPER& range)
-	{
-		return Bool(value(range, key));
-	}
-	inline int lookupInt(const OPER& key, const OPER& range)
-	{
-		return Int(value(range, key));
-	}
-	inline Decimal lookupDecimal(const OPER& key, const OPER& range)
-	{
-		return DecimalFunctions::doubleToDecimal(asNum(value(range, key)));
-	}
-	*/
 
 } // namespace xll
 

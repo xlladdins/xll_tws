@@ -136,7 +136,7 @@ namespace tws {
         Error(int id, time_t errorTime, int errorCode, const std::string& errorString, const std::string& advancedOrderRejectJson)
             : id(id), errorTime(errorTime), errorCode(errorCode), errorString(errorString), advancedOrderRejectJson(advancedOrderRejectJson)
         {
-            what_ = std::format("id: {} time: {} error: {}", errorCode, DateTime(errorTime), errorString);
+            what_ = std::format("id: {} time: {} error: {}\n", errorCode, DateTime(errorTime), errorString);
         }
 
         const char* what() const override

@@ -1,7 +1,7 @@
 // tws_contract.h
 #pragma once
 #include <string>
-#include "tws_api/Contract.h"
+#include "tws_matching_symbols.h"
 
 // name, tws type, Excel type
 #define TWS_CONTRACT(X) \
