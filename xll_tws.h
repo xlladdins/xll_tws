@@ -28,11 +28,15 @@ namespace xll {
 		}
 	}
 	
-	inline OPER DecimalNum(Decimal s)
+	inline Decimal DecimalNum(const XLOPER12& o)
 	{
-		return OPER(DecimalFunctions::decimalToDouble(s));
+		return DecimalFunctions::doubleToDecimal(Num(o));
 	}
-	
+	inline OPER DecimalNum(Decimal d)
+	{
+		return OPER(DecimalFunctions::decimalToDouble(d));
+	}
+
 
 	// TWS to Excel type
 #define TWS_XLL_TYPE(X) \

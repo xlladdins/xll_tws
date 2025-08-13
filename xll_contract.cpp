@@ -3,6 +3,7 @@
 // https://ibkrcampus.com/campus/ibkr-api-page/twsapi-doc/#contracts
 #include "xll_tws.h"
 #include "tws_contract.h"
+#include "tws_contract_details.h"
 
 using namespace xll;
 using namespace tws;
@@ -32,6 +33,35 @@ inline Contract eContract(const OPER& o)
 #define XLL_CONTRACT(name, tws, xll) else if (key == L#name) { c.name = xll(value(key, o)); }
 		TWS_CONTRACT(XLL_CONTRACT)
 #undef XLL_CONTRACT
+	}
+
+	return c;
+}
+
+const OPER oContractDetailsHeader({
+#define XLL_CONTRACT_DETAILS(name, tws, xll) OPER(L#name),
+	TWS_CONTRACT_DETAILS(XLL_CONTRACT_DETAILS)
+#undef XLL_CONTRACT_DETAILS	
+	});
+
+inline OPER oContractDetails(const ContractDetails& c)
+{
+#define XLL_CONTRACT_DETAILS(name, tws, xll) xll(c.name),
+	return OPER({
+		TWS_CONTRACT_DETAILS(XLL_CONTRACT_DETAILS)
+		});
+#undef XLL_CONTRACT_DETAILS
+}
+
+inline ContractDetails eContractDetails(const OPER& o)
+{
+	ContractDetails c;
+
+	for (const OPER& key : oContractDetailsHeader) {
+		if (false) {}
+#define XLL_CONTRACT_DETAILS(name, tws, xll) else if (key == L#name) { c.name = xll(value(key, o)); }
+		TWS_CONTRACT_DETAILS(XLL_CONTRACT_DETAILS)
+#undef XLL_CONTRACT_DETAILS
 	}
 
 	return c;
@@ -81,6 +111,60 @@ LPOPER WINAPI xll_contract(HANDLEX h)
 			handle<Contract> h_(h);
 			ensure(h_);
 			o.vstack(oContract(*h_));
+		}
+	}
+	catch (const std::exception& ex) {
+		XLL_ERROR(ex.what());
+	}
+
+	return &o;
+}
+
+
+AddIn xai_contract_details_(
+	Function(XLL_HANDLEX, L"xll_contract_details_", L"\\" CATEGORY L".ContractDetails")
+	.Arguments({
+		Arg(XLL_LPOPER, L"contract_details", L"JSON contract details.")
+		})
+	.Uncalced()
+	.Category(CATEGORY)
+	.FunctionHelp(L"Return a contract details handle from a key-value pair range.")
+);
+HANDLEX WINAPI xll_contract_details_(const LPOPER po)
+{
+#pragma XLLEXPORT
+	HANDLEX h = INVALID_HANDLEX;
+	try {
+		ContractDetails c = eContractDetails(*po);
+		handle<ContractDetails> h_(new ContractDetails(c));
+		ensure(h_);
+		h = h_.get();
+	}
+	catch (const std::exception& ex) {
+		XLL_ERROR(ex.what());
+	}
+	return h;
+}
+
+AddIn xai_contract_details(
+	Function(XLL_LPOPER, L"xll_contract_details", CATEGORY L".ContractDetails")
+	.Arguments({
+		Arg(XLL_HANDLEX, L"handle", L"is a handle to a ContractDetails.")
+		})
+	.Category(CATEGORY)
+	.FunctionHelp(L"Return key-value pairs for a given contract details handle or contractdetails fields if handle is 0.")
+);
+LPOPER WINAPI xll_contract_details(HANDLEX h)
+{
+#pragma XLLEXPORT
+	static OPER o;
+
+	try {
+		o = oContractDetailsHeader;
+		if (h != 0) {
+			handle<ContractDetails> h_(h);
+			ensure(h_);
+			o.vstack(oContractDetails(*h_));
 		}
 	}
 	catch (const std::exception& ex) {
@@ -144,3 +228,70 @@ LPOPER WINAPI xll_req_matching_symbols(HANDLEX h, const char* pattern)
 
 	return &o;
 }
+
+AddIn xai_contract_details_wrapper(
+	Function(XLL_HANDLEX, L"xll_contract_details_wrapper", L"\\" CATEGORY L"ContractDetails")
+	.Uncalced()
+	.Category(CATEGORY)
+	.FunctionHelp(L"Return handle to contract details wrapper.")
+);
+HANDLEX WINAPI xll_contract_details_wrapper()
+{
+#pragma XLLEXPORT
+	HANDLEX h = INVALID_HANDLEX;
+	try {
+		handle<Wrapper> h_(new ContractDetailsWrapper());
+		ensure(h_);
+		h = h_.get();
+	}
+	catch (const std::exception& ex) {
+		XLL_ERROR(ex.what());
+	}
+	return h;
+}
+
+AddIn xai_req_contract_details(
+	Function(XLL_LPOPER, L"xll_req_contract_details", CATEGORY L".ContractDetails")
+	.Arguments({
+		Arg(XLL_HANDLEX, L"handle", L"contract details handle."),
+		Arg(XLL_LPOPER, L"contract", L"contract to request details for.")
+		})
+	.Category(CATEGORY)
+	.FunctionHelp(L"Request contract details for a given contract.")
+);
+LPOPER WINAPI xll_req_contract_details(HANDLEX h, const LPOPER po)
+{
+#pragma XLLEXPORT
+	static OPER o;
+	try {
+		o = ErrNA;
+		handle<Wrapper> h_(h);
+		ensure(h_);
+		const auto pcdw = h_.as<ContractDetailsWrapper>();
+		ensure(pcdw);
+
+		if (isNum(*po)) {
+			handle<Contract> c_(Num(*po));
+			ensure(c_);
+			pcdw->req(*c_);
+		}
+		else {
+			Contract c = eContract(*po);
+			pcdw->req(c);
+		}
+		o = oContractDetailsHeader;
+		/*
+		pcdw->req(c);
+		o = oContractHeader;
+		for (const ContractDetails& cd : pcdw->contractDetailsResults) {
+			o.vstack(oContract(cd.contract));
+		}
+		pcdw->reset();
+		*/
+	}
+	catch (const std::exception& ex) {
+		XLL_ERROR(ex.what());
+	}
+	return &o;
+}
+

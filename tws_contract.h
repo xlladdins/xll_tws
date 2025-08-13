@@ -26,33 +26,33 @@
 	X(comboLegsDescrip, std::string , String) \
 
 #define TWS_CONTRACT_DETAILS(X) \
-	X(std::string, marketName, String) \
-	X(double, minTick, Num) \
-	X(std::string, orderTypes, String) \
-	X(std::string, validExchanges, String) \
-	X(long, priceMagnifier, Long) \
-	X(int, underConId, Int) \
-	X(std::string, longName, String) \
-	X(std::string, contractMonth, String) \
-	X(std::string, industry, String) \
-	X(std::string, category, String) \
-	X(std::string, subcategory, String) \
-	X(std::string, timeZoneId, String) \
-	X(std::string, tradingHours, String) \
-	X(std::string, liquidHours, String) \
-	X(std::string, evRule, String) \
-	X(double, evMultiplier, Num) \
-	X(int, aggGroup, Int) \
-	X(std::string, underSymbol, String) \
-	X(std::string, underSecType, String) \
-	X(std::string, marketRuleIds, String) \
-	X(std::string, realExpirationDate, String) \
-	X(std::string, lastTradeTime, String) \
-	X(std::string, stockType, String) \
-	X(Decimal, minSize, DecimalNum) \
-	X(Decimal, sizeIncrement, DecimalNum) \
-	X(Decimal, suggestedSizeIncrement, DecimalNum) \
-
+	X(marketName, std::string, String) \
+	X(minTick, double, Num) \
+	X(orderTypes, std::string, String) \
+	X(validExchanges, std::string, String) \
+	X(priceMagnifier, long, Long) \
+	X(underConId, int, Int) \
+	X(longName, std::string, String) \
+	X(contractMonth, std::string, String) \
+	X(industry, std::string, String) \
+	X(category, std::string, String) \
+	X(subcategory, std::string, String) \
+	X(timeZoneId, std::string, String) \
+	X(tradingHours, std::string, String) \
+	X(liquidHours, std::string, String) \
+	X(evRule, std::string, String) \
+	X(evMultiplier, double, Num) \
+	X(aggGroup, int, Int) \
+	X(underSymbol, std::string, String) \
+	X(underSecType, std::string, String) \
+	X(marketRuleIds, std::string, String) \
+	X(realExpirationDate, std::string, String) \
+	X(lastTradeTime, std::string, String) \
+	X(stockType, std::string, String) \
+	X(minSize, Decimal, DecimalNum) \
+	X(sizeIncrement, Decimal, DecimalNum) \
+	X(suggestedSizeIncrement, Decimal, DecimalNum) \
+// TODO: more fields
 
 namespace tws {
 
